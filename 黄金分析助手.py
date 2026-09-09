@@ -324,6 +324,7 @@ class GoldAnalyzerApp:
         self.alert_pct = tk.DoubleVar(value=ALERT_PCT)
         self.quick_lot_var = tk.DoubleVar(value=0.01)
         self.conn_var = tk.StringVar(value="连接中...")
+        self.alert_thresh_var = tk.StringVar(value="1.0%")  # 实时阈值显示
 
     def _frame(self, parent, title):
         f = tk.Frame(parent, bg=self.C["card"], relief="solid", bd=1)
@@ -617,8 +618,11 @@ class GoldAnalyzerApp:
                     try: self.notifier.show_toast("价格预警", msg, duration=5)
                     except: pass
                 if self.notify_sound_var.get() and HAS_SOUND:
-                    try: winsound.Beep(800, 200)
-                    except: pass
+                    try:
+                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                        winsound.Beep(800, 200)
+                    except Exception as e:
+                        print(f"声音错误: {e}")
                 self._auto_log(f"预警: {msg}")
         except Exception:
             pass
@@ -659,8 +663,13 @@ class GoldAnalyzerApp:
         tk.Label(af, text="波动阈值 %:", font=("Consolas", 9), fg=self.C["dim"], bg=self.C["card"]).pack(side="left", padx=(0,4))
         tk.Spinbox(af, from_=0.5, to=10, increment=0.5, textvariable=self.alert_pct, width=5,
                    font=("Consolas", 9), bg=self.C["bg"], fg=self.C["tx"], relief="flat").pack(side="left", padx=(0,8))
+        self.alert_pct.trace_add("write", lambda *args: self.alert_thresh_var.set(f"{self.alert_pct.get():.1f}%"))
         tk.Button(af, text="添加预警", command=self._add_alert,
                   bg=self.C["accent"], fg=self.C["bg"], font=("Consolas", 9), cursor="hand2", relief="flat", width=8).pack(side="left")
+        # 实时阈值显示
+        self.alert_thresh_lbl = tk.Label(af, textvariable=self.alert_thresh_var, font=("Consolas", 9, "bold"),
+                                         fg=self.C["yellow"], bg=self.C["card"])
+        self.alert_thresh_lbl.pack(side="left", padx=(10, 0))
         nf = tk.Frame(f, bg=self.C["card"]); nf.pack(fill="x", padx=8, pady=(4,0))
         self.notify_popup_var = tk.BooleanVar(value=True)
         self.notify_sound_var = tk.BooleanVar(value=True)
@@ -678,6 +687,10 @@ class GoldAnalyzerApp:
                                      relief="flat", activestyle="none")
         self.alert_list.pack(fill="both", expand=True, padx=8, pady=(0,5))
         self.alert_list.insert(0, "XAUUSDc 黄金  预警阈值 1.0%")
+        tf2 = tk.Frame(f, bg=self.C["card"]); tf2.pack(fill="x", padx=8, pady=(0,4))
+        tk.Button(tf2, text="测试声音", command=self._test_sound,
+                  bg=self.C["card"], fg=self.C["accent"], font=("Consolas", 8),
+                  cursor="hand2", relief="solid", bd=1, width=10).pack(side="right")
 
     def _panel_auto_trade(self, parent):
         f = self._frame(parent, "自动交易")
@@ -859,6 +872,18 @@ class GoldAnalyzerApp:
             self.countdown_var.set(f"{mins:02d}:{secs:02d}")
         except:
             pass
+
+    def _test_sound(self):
+        """测试声音告警"""
+        try:
+            if HAS_SOUND:
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                winsound.Beep(800, 300)
+                self._auto_log("声音测试: 成功")
+            else:
+                messagebox.showwarning("提示", "声音库未安装")
+        except Exception as e:
+            messagebox.showerror("错误", f"声音测试失败: {e}")
 
     def _select_mt5_path(self):
         import tkinter.filedialog as fd
