@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.032 - 完整版
+黄金分析助手 v3.033 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -304,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.032")
+        self.root.title("黄金分析助手 v3.033")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -370,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.032 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.033 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -996,9 +996,10 @@ class GoldAnalyzerApp:
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
-        # 创建双面板：上方面板K线+布林，下方面板MACD
-        ax = self.fig.add_subplot(211); ax.set_facecolor(self.C["card"])
-        ax_macd = self.fig.add_subplot(212); ax_macd.set_facecolor(self.C["card"])
+        # 创建三面板：上方面板K线+布林，中间ATR，下方MACD
+        ax = self.fig.add_subplot(311); ax.set_facecolor(self.C["card"])
+        ax_atr = self.fig.add_subplot(312); ax_atr.set_facecolor(self.C["card"])
+        ax_macd = self.fig.add_subplot(313); ax_macd.set_facecolor(self.C["card"])
         for i in range(n):
             co = self.C["red"] if cl[i] >= op[i] else self.C["green"]
             ax.plot([ti[i], ti[i]], [lo[i], hi[i]], color=co, linewidth=0.8)
@@ -1046,6 +1047,17 @@ class GoldAnalyzerApp:
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
         ax.set_ylabel("价格", color=self.C["tx"])
         ax.tick_params(axis='y', labelcolor=self.C["dim"])
+        
+        # 绘制ATR波动率
+        atr_val = a.get("atr", 0)
+        atr_pct = a.get("atr_pct", 0)
+        if atr_val > 0:
+            ax_atr.plot(ti, [atr_val] * len(ti), "purple", linewidth=1.5, label=f"ATR={atr_val:.2f} ({atr_pct:.2f}%)")
+            ax_atr.fill_between(ti, 0, atr_val, alpha=0.3, color="purple")
+            ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
+            ax_atr.set_ylabel("ATR", color="purple")
+            ax_atr.tick_params(axis='y', labelcolor="purple")
+            ax_atr.set_title("ATR 平均真实波幅", color=self.C["tx"], fontsize=9)
         
         # 绘制MACD
         macd_hist = a.get("macd_hist", [])
