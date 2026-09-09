@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.0 - 完整版
+黄金分析助手 v3.018 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -284,7 +284,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.0")
+        self.root.title("黄金分析助手 v3.018")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -306,7 +306,7 @@ class GoldAnalyzerApp:
         self.price_vars = {}; self.pcl = {}; self.daily_vars = {}; self.daily_lbls = {}
         self.tv = tk.StringVar(value="H1")
         self.sl = tk.StringVar(value="分析中...")
-        self.price_line = None  # 价格横线
+        self._price_lines = {}  # 价格横线 dict, key=id(ax)
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
         self.sl_label = None
         self.avars = {}
@@ -341,7 +341,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.017 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.018 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
@@ -896,11 +896,12 @@ class GoldAnalyzerApp:
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
         # 添加价格横线
+        ax_id = id(ax)
         if a.get("price"):
-            if self.price_line:
-                self.price_line.set_ydata([a["price"], a["price"]])
+            if ax_id in self._price_lines:
+                self._price_lines[ax_id].set_ydata([a["price"], a["price"]])
             else:
-                self.price_line = ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
+                self._price_lines[ax_id] = ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
         # 添加倒计时显示
@@ -1074,3 +1075,4 @@ if __name__ == "__main__":
     app = GoldAnalyzerApp(root)
     root.protocol("WM_DELETE_WINDOW", app._close)
     root.mainloop()
+
