@@ -742,7 +742,7 @@ class GoldAnalyzerApp:
         d += "| " + trend_cn + " " * (20 - len(trend_cn)) + " |\n"
         d += "| 多头得分: {:<3} |  空头得分: {:<3}   |\n".format(a["bs"], a["ss"])
         d += "\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\n"
-        if a["sup"]: d += "[支撑位] \${:.1f}      [阻力位] \${:.1f}\n\n".format(a["sup"], a["res"])
+        if a["sup"]: d += "[支撑位] ${:.1f}      [阻力位] ${:.1f}\n\n".format(a["sup"], a["res"])
         d += "\u250c\u2500 技术指标 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n"
         for n, l in a["signals"]:
             icon = "\u25cf" if l in ("\u4e70\u5165", "\u504f\u591a") else ("\u25cf" if l in ("\u5356\u51fa", "\u504f\u7a7a") else "\u25cb")
