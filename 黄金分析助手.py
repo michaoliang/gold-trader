@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.028 - 完整版
+黄金分析助手 v3.029 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -117,9 +117,21 @@ class MT5Engine:
         return 100-(100/(1+g/l)) if l>0 else 100
 
     def macd(self, c, f=12, s=26):
-        if len(c)<s: return 0,0,0
-        m = np.mean(c[-f:])-np.mean(c[-s:])
-        return m, m*0.9, m*0.1
+        if len(c)<s: return 0, [], []
+        # 计算历史MACD
+        macd_hist = []
+        for i in range(s-1, len(c)):
+            window = c[i-s+1:i+1]
+            m = np.mean(window[-f:]) - np.mean(window)
+            macd_hist.append(m)
+        # 计算信号线
+        signal = []
+        for i in range(len(macd_hist)):
+            if i < 8:
+                signal.append(sum(macd_hist[:i+1])/(i+1))
+            else:
+                signal.append(0.2*macd_hist[i] + 0.8*signal[-1])
+        return macd_hist[-1], signal[-1], macd_hist
 
     def bb(self, c, p=20, k=2):
         if len(c)<p: return None
@@ -148,7 +160,7 @@ class MT5Engine:
         if not t: return None
         ma = {p:self.ma(c,p) for p in [5,10,20,50]}
         rsi = self.rsi(c)
-        m, ms, mh = self.macd(c)
+        m, ms, mh = self.macd(c)  # m=当前值, ms=信号线, mh=历史值列表
         bb = self.bb(c)
         atr = self.atr(h,l,c)
         res, sup = self.levels(r)
@@ -162,8 +174,9 @@ class MT5Engine:
         elif rsi>60: sig.append((f"RSI={rsi:.0f}","偏空"))
         elif rsi<40: sig.append((f"RSI={rsi:.0f}","偏多"))
         else: sig.append((f"RSI={rsi:.0f}","中性"))
-        if m>0 and mh>0: sig.append(("MACD金叉","买入"))
-        elif m<0 and mh<0: sig.append(("MACD死叉","卖出"))
+        # mh现在是列表，用ms(信号线)做比较
+        if m>0 and ms>0: sig.append(("MACD金叉","买入"))
+        elif m<0 and ms<0: sig.append(("MACD死叉","卖出"))
         if bb and t.bid<bb[2]: sig.append(("触布林下轨","买入"))
         elif bb and t.bid>bb[0]: sig.append(("触布林上轨","卖出"))
         if sup and t.bid-sup<2: sig.append((f"支撑 ${sup:.1f}","关注"))
@@ -285,7 +298,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.028")
+        self.root.title("黄金分析助手 v3.029")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -351,7 +364,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.028 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.029 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -977,7 +990,9 @@ class GoldAnalyzerApp:
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
-        ax = self.fig.add_subplot(111); ax.set_facecolor(self.C["card"])
+        # 创建双面板：上方面板K线+布林，下方面板MACD
+        ax = self.fig.add_subplot(211); ax.set_facecolor(self.C["card"])
+        ax_macd = self.fig.add_subplot(212); ax_macd.set_facecolor(self.C["card"])
         for i in range(n):
             co = self.C["red"] if cl[i] >= op[i] else self.C["green"]
             ax.plot([ti[i], ti[i]], [lo[i], hi[i]], color=co, linewidth=0.8)
@@ -985,6 +1000,29 @@ class GoldAnalyzerApp:
         o = n - len(m5); ax.plot(ti[o:], m5, "white", linewidth=1, label="MA5")
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
+        
+        # 绘制布林带
+        if a.get("bb"):
+            bb_upper, bb_mid, bb_lower = a["bb"]
+            # 计算布林带历史数据
+            bb_mids = []
+            bb_stds = []
+            for i in range(19, len(cl)):
+                window = cl[i-19:i+1]
+                bb_mids.append(np.mean(window))
+                bb_stds.append(np.std(window))
+            bb_uppers = [bb_mids[i] + 2*bb_stds[i] for i in range(len(bb_mids))]
+            bb_lowers = [bb_mids[i] - 2*bb_stds[i] for i in range(len(bb_mids))]
+            # 绘制布林带轨道
+            offset = n - len(bb_uppers)
+            if offset < 0: offset = 0
+            ax.plot(ti[offset:], bb_uppers[offset:], "cyan", linewidth=0.8, alpha=0.7, label="BOLL上轨")
+            ax.plot(ti[offset:], bb_mids[offset:], "cyan", linewidth=0.5, alpha=0.5, label="BOLL中轨")
+            ax.plot(ti[offset:], bb_lowers[offset:], "cyan", linewidth=0.8, alpha=0.7, label="BOLL下轨")
+            # 填充布林带区域
+            ax.fill_between(ti[offset:], bb_uppers[offset:], bb_lowers[offset:], 
+                           alpha=0.1, color="cyan")
+        
         # 添加价格横线
         if a.get("price"):
             ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
@@ -1001,6 +1039,32 @@ class GoldAnalyzerApp:
         ax.tick_params(colors=self.C["dim"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
+        ax.set_ylabel("价格", color=self.C["tx"])
+        ax.tick_params(axis='y', labelcolor=self.C["dim"])
+        
+        # 绘制MACD
+        macd_hist = a.get("macd_hist", [])
+        if macd_hist and len(macd_hist) >= n:
+            macd_line = macd_hist[-n:]
+            # 计算信号线
+            signal_line = []
+            for i in range(len(macd_line)):
+                if i < 8:
+                    signal_line.append(sum(macd_line[:i+1])/(i+1))
+                else:
+                    signal_line.append(0.2*macd_line[i] + 0.8*signal_line[-1])
+            
+            # MACD柱状图
+            colors = [self.C["green"] if v >= 0 else self.C["red"] for v in macd_line]
+            ax_macd.bar(ti, macd_line, color=colors, alpha=0.6, width=0.6)
+            ax_macd.plot(ti, macd_line, "cyan", linewidth=1, label="MACD")
+            ax_macd.plot(ti, signal_line, "orange", linewidth=1, label="Signal")
+            ax_macd.axhline(y=0, color=self.C["bd"], linewidth=0.5)
+            ax_macd.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
+            ax_macd.set_ylabel("MACD", color=self.C["tx"])
+            ax_macd.tick_params(axis='y', labelcolor=self.C["dim"])
+            ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
+        
         self.fig.tight_layout(); self.canvas.draw()
     def _update_countdown(self):
         """更新周期倒计时 - 每秒刷新"""
