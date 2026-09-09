@@ -341,7 +341,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.015 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.017 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
@@ -780,18 +780,68 @@ class GoldAnalyzerApp:
         self.ivars['macd'].set(macd_str)
         
         # 布林带
-        if a["bb"]:
-            self.ivars['bbu'].set(f"{a['bb'][0]:.2f}")
-            self.ivars['bbl'].set(f"{a['bb'][2]:.2f}")
+        if a.get("bb"):
+            self.bb_upper_var.set(f"{a['bb'][0]:.2f}")
+            self.bb_mid_var.set(f"{a['bb'][1]:.2f}")
+            self.bb_lower_var.set(f"{a['bb'][2]:.2f}")
+            # 价格位置
+            price = a.get('price', 0)
+            if price > 0:
+                pos_pct = (price - a['bb'][2]) / (a['bb'][0] - a['bb'][2]) * 100 if a['bb'][0] != a['bb'][2] else 50
+                self.bb_pos_var.set(f"{pos_pct:.1f}%")
+            # 带宽
+            bw = (a['bb'][0] - a['bb'][2]) / a['bb'][1] * 100 if a['bb'][1] > 0 else 0
+            self.bb_width_var.set(f"{bw:.2f}%")
+        
+        # RSI
+        rsi = a.get('rsi', 0)
+        rsi_str = f"{rsi:.1f}"
+        if rsi > 70: 
+            rsi_str += " 🔴超买"
+            self.rsi_state_var.set("超买")
+        elif rsi < 30: 
+            rsi_str += " 🟢超卖"
+            self.rsi_state_var.set("超卖")
+        else: 
+            self.rsi_state_var.set("中性")
+        self.rsi_val_var.set(rsi_str)
+        
+        # MACD
+        macd_val = a.get('macd', 0)
+        macd_str = f"{macd_val:.2f}"
+        if macd_val > 0: 
+            macd_str += " ↑金叉"
+            self.macd_state_var.set("金叉")
+        elif macd_val < 0: 
+            macd_str += " ↓死叉"
+            self.macd_state_var.set("死叉")
+        else:
+            self.macd_state_var.set("观望")
+        self.macd_val_var.set(macd_str)
+        
+        # MA状态
+        ma5, ma10, ma20, ma50 = a['ma'][5], a['ma'][10], a['ma'][20], a['ma'][50]
+        if ma5 > ma10 > ma20:
+            self.ma_trend_var.set("多头 ↑↑↑")
+        elif ma5 < ma10 < ma20:
+            self.ma_trend_var.set("空头 ↓↓↓")
+        else:
+            self.ma_trend_var.set("横盘 →")
         
         # ATR波动率
-        atr = a['atr']
-        vol_pct = atr / a['price'] * 100 if a['price'] > 0 else 0
+        atr = a.get('atr', 0)
+        vol_pct = atr / a.get('price', 1) * 100 if a.get('price', 0) > 0 else 0
         vol_str = f"{vol_pct:.2f}%"
-        if a['vol'] == '高': vol_str += " 🔥高波"
-        elif a['vol'] == '中': vol_str += " 📊中波"
-        else: vol_str += " ❄️低波"
-        self.ivars['atr'].set(f"{atr:.2f}")
+        vol_state = a.get('vol', '中')
+        if vol_state == '高': 
+            vol_str += " 🔥高波"
+            self.vol_state_var.set("高波")
+        elif vol_state == '低': 
+            vol_str += " ❄️低波"
+            self.vol_state_var.set("低波")
+        else:
+            self.vol_state_var.set("中波")
+        self.atr_val_var.set(f"{atr:.2f}")
         self.vv.set(vol_str)
 
     def _account(self):
