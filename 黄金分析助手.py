@@ -324,7 +324,6 @@ class GoldAnalyzerApp:
         self.alert_pct = tk.DoubleVar(value=ALERT_PCT)
         self.quick_lot_var = tk.DoubleVar(value=0.01)
         self.conn_var = tk.StringVar(value="连接中...")
-        self.alert_thresh_var = tk.StringVar(value="1.0%")  # 实时阈值显示
 
     def _frame(self, parent, title):
         f = tk.Frame(parent, bg=self.C["card"], relief="solid", bd=1)
@@ -341,7 +340,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.009 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.004 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
@@ -618,11 +617,8 @@ class GoldAnalyzerApp:
                     try: self.notifier.show_toast("价格预警", msg, duration=5)
                     except: pass
                 if self.notify_sound_var.get() and HAS_SOUND:
-                    try:
-                        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                        winsound.Beep(800, 200)
-                    except Exception as e:
-                        print(f"声音错误: {e}")
+                    try: winsound.Beep(800, 200)
+                    except: pass
                 self._auto_log(f"预警: {msg}")
         except Exception:
             pass
@@ -663,13 +659,8 @@ class GoldAnalyzerApp:
         tk.Label(af, text="波动阈值 %:", font=("Consolas", 9), fg=self.C["dim"], bg=self.C["card"]).pack(side="left", padx=(0,4))
         tk.Spinbox(af, from_=0.5, to=10, increment=0.5, textvariable=self.alert_pct, width=5,
                    font=("Consolas", 9), bg=self.C["bg"], fg=self.C["tx"], relief="flat").pack(side="left", padx=(0,8))
-        self.alert_pct.trace_add("write", lambda *args: self.alert_thresh_var.set(f"{self.alert_pct.get():.1f}%"))
         tk.Button(af, text="添加预警", command=self._add_alert,
                   bg=self.C["accent"], fg=self.C["bg"], font=("Consolas", 9), cursor="hand2", relief="flat", width=8).pack(side="left")
-        # 实时阈值显示
-        self.alert_thresh_lbl = tk.Label(af, textvariable=self.alert_thresh_var, font=("Consolas", 9, "bold"),
-                                         fg=self.C["yellow"], bg=self.C["card"])
-        self.alert_thresh_lbl.pack(side="left", padx=(10, 0))
         nf = tk.Frame(f, bg=self.C["card"]); nf.pack(fill="x", padx=8, pady=(4,0))
         self.notify_popup_var = tk.BooleanVar(value=True)
         self.notify_sound_var = tk.BooleanVar(value=True)
@@ -687,10 +678,6 @@ class GoldAnalyzerApp:
                                      relief="flat", activestyle="none")
         self.alert_list.pack(fill="both", expand=True, padx=8, pady=(0,5))
         self.alert_list.insert(0, "XAUUSDc 黄金  预警阈值 1.0%")
-        tf2 = tk.Frame(f, bg=self.C["card"]); tf2.pack(fill="x", padx=8, pady=(0,4))
-        tk.Button(tf2, text="测试声音", command=self._test_sound,
-                  bg=self.C["card"], fg=self.C["accent"], font=("Consolas", 8),
-                  cursor="hand2", relief="solid", bd=1, width=10).pack(side="right")
 
     def _panel_auto_trade(self, parent):
         f = self._frame(parent, "自动交易")
@@ -743,6 +730,14 @@ class GoldAnalyzerApp:
         cm = {"green": self.C["green"], "red": self.C["red"], "orange": self.C["yellow"], "lightgreen": self.C["green"], "gray": self.C["dim"]}
         if self.sl_label: self.sl_label.config(text=txt, fg=cm.get(col, self.C["yellow"]))
         else: self.sl.set(txt)
+        d = f"Trend: {a['trend']}\nScore: Buy {a['bs']} | Sell {a['ss']}\n"
+        if a["sup"]: d += f"Support: ${a['sup']:.1f}  Resistance: ${a['res']:.1f}\n"
+        d += "\n"
+        for n, l in a["signals"]:
+            lc = self.C["green"] if l in ("买入", "偏多", "强势") else (self.C["red"] if l in ("卖出", "偏空", "强势") else self.C["yellow"])
+            d += f"* {n}: {l}\n"
+        self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
+        # === 技术指标显示（科技感版）===
         # 简体中文 + 科技感样式
         trend_cn = {"上涨": "📈 上升趋势", "下跌": "📉 下降趋势", "盘整": "➡️ 横盘整理"}.get(a["trend"], a["trend"])
         d = "┌─ 趋势分析 ─────────────┐
@@ -765,15 +760,6 @@ class GoldAnalyzerApp:
 ".format(icon, n, l)
         d += "└───────────────────┘"
         self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
-        # === 技术指标显示（科技感版）===
-        # MA系统
-        ma5, ma10, ma20, ma50 = a['ma'][5], a['ma'][10], a['ma'][20], a['ma'][50]
-        ma5_str = f"{ma5:.2f}"
-        ma10_str = f"{ma10:.2f}"
-        ma20_str = f"{ma20:.2f}"
-        ma50_str = f"{ma50:.2f}"
-        # 添加MA状态
-        if ma5 > ma10 > ma20:
             ma5_str += " 多头"
         elif ma5 < ma10 < ma20:
             ma5_str += " 空头"
@@ -864,15 +850,8 @@ class GoldAnalyzerApp:
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
-        # 添加价格横线
-        if a.get("price"):
-            if self.price_line:
-                self.price_line.set_ydata([a["price"], a["price"]])
-            else:
-                self.price_line = ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
-        countdown_str = self.countdown_var.get() if hasattr(self, "countdown_var") else "--:--"
-        ax.set_title("XAUUSDc " + self.tv.get() + "  当前: " + f"{a['price']:.2f}" + "  倒计时: " + countdown_str, color=self.C["tx"], fontsize=10)
+        ax.set_title(f"XAUUSDc {self.tv.get()}  当前: {a['price']:.2f}", color=self.C["tx"], fontsize=10)
         ax.tick_params(colors=self.C["dim"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
@@ -894,18 +873,6 @@ class GoldAnalyzerApp:
             self.countdown_var.set(f"{mins:02d}:{secs:02d}")
         except:
             pass
-
-    def _test_sound(self):
-        """测试声音告警"""
-        try:
-            if HAS_SOUND:
-                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-                winsound.Beep(800, 300)
-                self._auto_log("声音测试: 成功")
-            else:
-                messagebox.showwarning("提示", "声音库未安装")
-        except Exception as e:
-            messagebox.showerror("错误", f"声音测试失败: {e}")
 
     def _select_mt5_path(self):
         import tkinter.filedialog as fd
