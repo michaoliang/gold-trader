@@ -332,7 +332,7 @@ class GoldAnalyzerApp:
         f = tk.Frame(parent, bg=self.C["bd"], relief="flat")
         f.pack(fill="x", padx=10, pady=6)
         inner = tk.Frame(f, bg=self.C["card"], relief="flat")
-        inner.pack(fill="x", padx=1, pady=1)
+        inner.pack(fill="x", padx=2, pady=2)
         # 标题栏 - 渐变效果
         hdr = tk.Frame(inner, bg=self.C["card2"], height=2)
         hdr.pack(fill="x")
@@ -402,7 +402,7 @@ class GoldAnalyzerApp:
         f = self._frame(parent, "实时行情")
         for sym, name in MT5Engine.SYMBOLS.items():
             row = tk.Frame(f, bg=self.C["card"])
-            row.pack(fill="x", padx=4, pady=2)
+            row.pack(fill="x", padx=8, pady=3)
             kf = tk.Frame(row, bg=self.C["card"])
             kf.pack(side="left")
             tk.Label(kf, text="● "+sym, font=("Consolas", 9, "bold"), fg=self.C["accent"], bg=self.C["card"]).pack(side="left")
@@ -425,19 +425,19 @@ class GoldAnalyzerApp:
         for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
             tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
                       activebackground=self.C['accent'], relief='flat', cursor='hand2',
-                      command=lambda o=opt: self.tv.set(o) or self._signal() or self._chart()).pack(side='left', padx=2)
+                      command=lambda o=opt: self.tv.set(o) or self._signal() or self._chart()).pack(side='left', padx=4)
         self.sd = tk.Text(f, height=1, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'],
                           insertbackground=self.C['tx'], relief='flat', state='disabled')
-        self.sd.pack(fill='x', padx=4, pady=(4, 0))
-        qf = tk.Frame(f, bg=self.C['card']); qf.pack(fill='x', padx=4, pady=(4,0))
+        self.sd.pack(fill='x', padx=8, pady=(4, 0))
+        qf = tk.Frame(f, bg=self.C['card']); qf.pack(fill='x', padx=8, pady=(4,0))
         tk.Label(qf, text='快捷交易:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left')
         self.quick_lot_var = tk.DoubleVar(value=0.01)
         tk.Spinbox(qf, from_=0.01, to=2.0, increment=0.01, textvariable=self.quick_lot_var, width=6,
                  font=('Consolas', 9), bg=self.C['bg'], fg=self.C['tx'], relief='flat').pack(side='left', padx=(0,4))
         tk.Button(qf, text='▲ BUY', font=('Consolas', 9, 'bold'), fg='#000000', bg=self.C['green'], relief='flat', cursor='hand2',
-                 command=lambda: self._quick_trade('buy'), highlightthickness=2, highlightbackground=self.C['glow']).pack(side='left', padx=2)
+                 command=lambda: self._quick_trade('buy'), highlightthickness=2, highlightbackground=self.C['glow']).pack(side='left', padx=4)
         tk.Button(qf, text='▼ SELL', font=('Consolas', 9, 'bold'), fg='#000000', bg=self.C['red'], relief='flat', cursor='hand2',
-                 command=lambda: self._quick_trade('sell'), highlightthickness=2, highlightbackground=self.C['glow']).pack(side='left', padx=2)
+                 command=lambda: self._quick_trade('sell'), highlightthickness=2, highlightbackground=self.C['glow']).pack(side='left', padx=4)
 
     def _panel_account(self, parent):
         f = self._frame(parent, '账户信息')
@@ -456,7 +456,7 @@ class GoldAnalyzerApp:
         for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
             tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
                       activebackground=self.C['accent'], relief='flat', cursor='hand2',
-                      command=lambda o=opt: self.chart_tv.set(o) or self.tv.set(o) or self._chart() or self._signal()).pack(side='left', padx=2)
+                      command=lambda o=opt: self.chart_tv.set(o) or self.tv.set(o) or self._chart() or self._signal()).pack(side='left', padx=4)
         self.fig = Figure(figsize=(10, 5), facecolor=self.C['card'])
         self.canvas = FigureCanvasTkAgg(self.fig, master=f)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
@@ -469,7 +469,7 @@ class GoldAnalyzerApp:
                            fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6,
                            relief="flat", bd=0)
         bbf.pack_propagate(False)
-        bbf.pack(fill="x", padx=6, pady=4)
+        bbf.pack(fill="x", padx=10, pady=6)
         
         # 布林带三轨显示
         bf = tk.Frame(bbf, bg=self.C["card"])
@@ -511,9 +511,9 @@ class GoldAnalyzerApp:
         tk.Label(wf, textvariable=self.bb_width_var, font=("Consolas", 9), fg=self.C["tx"], bg=self.C["card"]).pack(side="right")
         
         # ===== RSI 可视化 =====
-        rsif = tk.LabelFrame(f, text="📈 RSI 相对强弱指数", font=("Consolas", 9, "bold"),
+        rsif = tk.LabelFrame(f, text="⚡ RSI 相对强弱指数", font=("Consolas", 9, "bold"),
                             fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6)
-        rsif.pack(fill="x", padx=6, pady=4)
+        rsif.pack(fill="x", padx=10, pady=6)
         
         rsif2 = tk.Frame(rsif, bg=self.C["card"])
         rsif2.pack(fill="x")
@@ -530,7 +530,7 @@ class GoldAnalyzerApp:
         macdf = tk.LabelFrame(f, text="⚛ MACD 指数平滑异同", font=("Consolas", 9, "bold"),
                              fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6,
                              relief="flat", bd=0)
-        macdf.pack(fill="x", padx=6, pady=4)
+        macdf.pack(fill="x", padx=10, pady=6)
         
         macdf2 = tk.Frame(macdf, bg=self.C["card"])
         macdf2.pack(fill="x")
@@ -546,7 +546,7 @@ class GoldAnalyzerApp:
         maf = tk.LabelFrame(f, text="◆ MA 移动平均系统", font=("Consolas", 9, "bold"),
                            fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6,
                            relief="flat", bd=0)
-        maf.pack(fill="x", padx=6, pady=4)
+        maf.pack(fill="x", padx=10, pady=6)
         
         ma_grid = tk.Frame(maf, bg=self.C["card"])
         ma_grid.pack(fill="x")
@@ -569,7 +569,7 @@ class GoldAnalyzerApp:
         atrf = tk.LabelFrame(f, text="⚡ ATR 波动率分析", font=("Consolas", 9, "bold"),
                             fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6,
                             relief="flat", bd=0)
-        atrf.pack(fill="x", padx=6, pady=4)
+        atrf.pack(fill="x", padx=10, pady=6)
         
         atrf2 = tk.Frame(atrf, bg=self.C["card"])
         atrf2.pack(fill="x")
@@ -675,7 +675,7 @@ class GoldAnalyzerApp:
             self.target_var.set(f"目标 ${TARGET_BALANCE:.0f} | 当前 ${i['balance']:.0f} | {done if i['balance'] >= TARGET_BALANCE else '还需 +$' + str(int(rem))}")
     def _panel_alerts(self, parent):
         f = self._frame(parent, "价格预警")
-        af = tk.Frame(f, bg=self.C["card"]); af.pack(fill="x", padx=8)
+        af = tk.Frame(f, bg=self.C["card"]); af.pack(fill="x", padx=10)
         tk.Label(af, text="波动阈值 %:", font=("Consolas", 9), fg=self.C["dim"], bg=self.C["card"]).pack(side="left", padx=(0,4))
         tk.Spinbox(af, from_=0.5, to=10, increment=0.5, textvariable=self.alert_pct, width=5,
                    font=("Consolas", 9), bg=self.C["bg"], fg=self.C["tx"], relief="flat").pack(side="left", padx=(0,8))
@@ -686,7 +686,7 @@ class GoldAnalyzerApp:
         self.alert_thresh_lbl = tk.Label(af, textvariable=self.alert_thresh_var, font=("Consolas", 9, "bold"),
                                          fg=self.C["yellow"], bg=self.C["card"])
         self.alert_thresh_lbl.pack(side="left", padx=(10, 0))
-        nf = tk.Frame(f, bg=self.C["card"]); nf.pack(fill="x", padx=8, pady=(4,0))
+        nf = tk.Frame(f, bg=self.C["card"]); nf.pack(fill="x", padx=10, pady=(4,0))
         self.notify_popup_var = tk.BooleanVar(value=True)
         self.notify_sound_var = tk.BooleanVar(value=True)
         tk.Checkbutton(nf, text="桌面弹窗通知", variable=self.notify_popup_var,
@@ -735,14 +735,14 @@ class GoldAnalyzerApp:
                  bg=self.C['bg'], fg=self.C['tx'], relief='flat', width=45).pack(side='left', fill='x', expand=True, padx=(0,4))
         tk.Button(ptf, text='选择', command=self._select_mt5_path,
                   bg=self.C['card'], fg=self.C['accent'], font=('Consolas', 9),
-                  cursor='hand2', relief='flat').pack(side='left', padx=2)
+                  cursor='hand2', relief='flat').pack(side='left', padx=4)
         bf = tk.Frame(f, bg=self.C['card']); bf.pack(fill='x', padx=8, pady=4)
         tk.Label(bf, text='EA状态:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(0,8))
         self.ea_status_var = tk.StringVar(value='未部署')
         tk.Label(bf, textvariable=self.ea_status_var, font=('Consolas', 9), fg=self.C['yellow'], bg=self.C['card']).pack(side='left', padx=(0,15))
         tk.Button(bf, text='编译部署EA', command=self._deploy_ea,
                   bg=self.C['accent'], fg=self.C['bg'], font=('Consolas', 9, 'bold'),
-                  cursor='hand2', relief='flat', width=12).pack(side='left', padx=2)
+                  cursor='hand2', relief='flat', width=12).pack(side='left', padx=4)
         inf = tk.Frame(f, bg=self.C['card']); inf.pack(fill='x', padx=8, pady=(4,0))
         tk.Label(inf, text='INFO 1.选择MT5路径 -> 2.编译部署 -> 3.打开MT5 -> 4.拖EA到图表 -> 5.勾选允许算法交易',
                  font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], wraplength=500).pack(anchor='w')
@@ -906,6 +906,7 @@ class GoldAnalyzerApp:
             self.pt.config(state="disabled")
 
     def _chart(self):
+        self.countdown_annot = None  # 重置倒计时标注
         self.fig.clear(); a = self.anz.analyze("XAUUSDc", self.tv.get())
         if not a or a.get("rates") is None: return
         r = a["rates"]; n = min(len(r), 80)
