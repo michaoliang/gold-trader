@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.029 - 完整版
+黄金分析助手 v3.030 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -9,6 +9,12 @@ import threading
 import time
 import configparser
 import os
+
+def _dbg(msg):
+    try:
+        with open(r"E:\MySoftware\黄金分析工具_Portable\debug.log", "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime("%H:%M:%S")} {msg}\n")
+    except: pass
 from datetime import datetime
 
 try:
@@ -298,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.029")
+        self.root.title("黄金分析助手 v3.030")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -364,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.029 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.030 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -1004,24 +1010,23 @@ class GoldAnalyzerApp:
         # 绘制布林带
         if a.get("bb"):
             bb_upper, bb_mid, bb_lower = a["bb"]
-            # 计算布林带历史数据
+            # 计算布林带历史数据 - 使用r中的完整数据
             bb_mids = []
             bb_stds = []
-            for i in range(19, len(cl)):
-                window = cl[i-19:i+1]
+            for i in range(19, len(r["close"])):
+                window = r["close"][i-19:i+1]
                 bb_mids.append(np.mean(window))
                 bb_stds.append(np.std(window))
             bb_uppers = [bb_mids[i] + 2*bb_stds[i] for i in range(len(bb_mids))]
             bb_lowers = [bb_mids[i] - 2*bb_stds[i] for i in range(len(bb_mids))]
-            # 绘制布林带轨道
-            offset = n - len(bb_uppers)
-            if offset < 0: offset = 0
-            ax.plot(ti[offset:], bb_uppers[offset:], "cyan", linewidth=0.8, alpha=0.7, label="BOLL上轨")
-            ax.plot(ti[offset:], bb_mids[offset:], "cyan", linewidth=0.5, alpha=0.5, label="BOLL中轨")
-            ax.plot(ti[offset:], bb_lowers[offset:], "cyan", linewidth=0.8, alpha=0.7, label="BOLL下轨")
-            # 填充布林带区域
-            ax.fill_between(ti[offset:], bb_uppers[offset:], bb_lowers[offset:], 
-                           alpha=0.1, color="cyan")
+            # 只取最后n个数据点
+            bb_mids = bb_mids[-n:]
+            bb_uppers = bb_uppers[-n:]
+            bb_lowers = bb_lowers[-n:]
+            ax.plot(ti, bb_uppers, "cyan", linewidth=0.8, alpha=0.7, label="BOLL上轨")
+            ax.plot(ti, bb_mids, "cyan", linewidth=0.5, alpha=0.5, label="BOLL中轨")
+            ax.plot(ti, bb_lowers, "cyan", linewidth=0.8, alpha=0.7, label="BOLL下轨")
+            ax.fill_between(ti, bb_uppers, bb_lowers, alpha=0.1, color="cyan")
         
         # 添加价格横线
         if a.get("price"):
