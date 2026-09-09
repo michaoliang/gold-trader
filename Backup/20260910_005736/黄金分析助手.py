@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.057 - 完整版
+黄金分析助手 v3.038 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -319,7 +319,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.057")
+        self.root.title("黄金分析助手 v3.038")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -387,7 +387,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.057 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.038 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -555,7 +555,7 @@ class GoldAnalyzerApp:
             tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
                       activebackground=self.C['accent'], relief='flat', cursor='hand2',
                       command=lambda o=opt: self.chart_tv.set(o) or self.tv.set(o) or self._chart() or self._signal()).pack(side='left', padx=4)
-        self.fig = Figure(figsize=(12, 14), facecolor=self.C['card'])
+        self.fig = Figure(figsize=(10, 8), facecolor=self.C['card'])
         self.canvas = FigureCanvasTkAgg(self.fig, master=f)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
 
@@ -1035,7 +1035,7 @@ class GoldAnalyzerApp:
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
         # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 4, 4], hspace=0.08)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[10, 2.5, 2.5], hspace=1)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
