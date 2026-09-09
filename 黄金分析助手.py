@@ -738,28 +738,14 @@ class GoldAnalyzerApp:
             d += f"* {n}: {l}\n"
         self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
         # === 技术指标显示（科技感版）===
-        # 简体中文 + 科技感样式
-        trend_cn = {"上涨": "📈 上升趋势", "下跌": "📉 下降趋势", "盘整": "➡️ 横盘整理"}.get(a["trend"], a["trend"])
-        d = "┌─ 趋势分析 ─────────────┐
-"
-        d += "| " + trend_cn + " " * (20 - len(trend_cn)) + " |
-"
-        d += "| 多头得分: {:<3} |  空头得分: {:<3}   |
-".format(a["bs"], a["ss"])
-        d += "└───────────────────┘
-
-"
-        if a["sup"]: d += "[支撑位] ${:.1f}      [阻力位] ${:.1f}
-
-".format(a["sup"], a["res"])
-        d += "┌─ 技术指标 ─────────────┐
-"
-        for n, l in a["signals"]:
-            icon = "●" if l in ("买入", "偏多") else ("●" if l in ("卖出", "偏空") else "○")
-            d += "| {} {:<16} {}  |
-".format(icon, n, l)
-        d += "└───────────────────┘"
-        self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
+        # MA系统
+        ma5, ma10, ma20, ma50 = a['ma'][5], a['ma'][10], a['ma'][20], a['ma'][50]
+        ma5_str = f"{ma5:.2f}"
+        ma10_str = f"{ma10:.2f}"
+        ma20_str = f"{ma20:.2f}"
+        ma50_str = f"{ma50:.2f}"
+        # 添加MA状态
+        if ma5 > ma10 > ma20:
             ma5_str += " 多头"
         elif ma5 < ma10 < ma20:
             ma5_str += " 空头"
