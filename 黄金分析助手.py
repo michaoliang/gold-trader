@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 黄金分析助手 v3.018 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
@@ -306,7 +306,6 @@ class GoldAnalyzerApp:
         self.price_vars = {}; self.pcl = {}; self.daily_vars = {}; self.daily_lbls = {}
         self.tv = tk.StringVar(value="H1")
         self.sl = tk.StringVar(value="分析中...")
-        self._price_lines = {}  # 价格横线 dict, key=id(ax)
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
         self.sl_label = None
         self.avars = {}
@@ -896,12 +895,8 @@ class GoldAnalyzerApp:
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
         # 添加价格横线
-        ax_id = id(ax)
         if a.get("price"):
-            if ax_id in self._price_lines:
-                self._price_lines[ax_id].set_ydata([a["price"], a["price"]])
-            else:
-                self._price_lines[ax_id] = ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
+            ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
         # 添加倒计时显示
