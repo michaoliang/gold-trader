@@ -737,7 +737,7 @@ class GoldAnalyzerApp:
         if self.sl_label: self.sl_label.config(text=txt, fg=cm.get(col, self.C["yellow"]))
         else: self.sl.set(txt)
         # 简体中文 + 科技感样式
-        trend_cn = {"上涨": "📈 上升趋势", "下跌": "📉 下降趋势", "盘整": "➡️ 横盘整理"}.get(a["trend"], a["trend"])
+        trend_cn = {"上涨": "\U0001f4c8 上升趋势", "下跌": "\U0001f4c9 下降趋势", "盘整": "\u27a1\uFE0F 横盘整理"}.get(a["trend"], a["trend"])
         d = "\u250c\u2500 趋势分析 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n"
         d += "| " + trend_cn + " " * (20 - len(trend_cn)) + " |\n"
         d += "| 多头得分: {:<3} |  空头得分: {:<3}   |\n".format(a["bs"], a["ss"])
