@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.033 - 完整版
+黄金分析助手 v3.034 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -304,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.033")
+        self.root.title("黄金分析助手 v3.034")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -370,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.033 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.034 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -454,9 +454,9 @@ class GoldAnalyzerApp:
         self.quick_lot_var = tk.DoubleVar(value=0.01)
         tk.Spinbox(qf, from_=0.01, to=2.0, increment=0.01, textvariable=self.quick_lot_var, width=6,
                  font=('Consolas', 9), bg=self.C['bg'], fg=self.C['tx'], relief='flat').pack(side='left', padx=(0,4))
-        tk.Button(qf, text='▲ BUY', font=('Consolas', 9, 'bold'), fg='#000000', bg=self.C['green'], relief='flat', cursor='hand2',
+        tk.Button(qf, text='▲ BUY', font=('Consolas', 9, 'bold'), fg='white', bg=self.C['green'], relief='flat', cursor='hand2',
                  command=lambda: self._quick_trade('buy'), highlightthickness=2, highlightbackground=self.C['glow']).pack(side='left', padx=4)
-        tk.Button(qf, text='▼ SELL', font=('Consolas', 9, 'bold'), fg='#000000', bg=self.C['red'], relief='flat', cursor='hand2',
+        tk.Button(qf, text='▼ SELL', font=('Consolas', 9, 'bold'), fg='white', bg=self.C['red'], relief='flat', cursor='hand2',
                  command=lambda: self._quick_trade('sell'), highlightthickness=2, highlightbackground=self.C['glow']).pack(side='left', padx=4)
 
     def _panel_account(self, parent):
