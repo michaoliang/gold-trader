@@ -341,7 +341,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.004 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.009 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
