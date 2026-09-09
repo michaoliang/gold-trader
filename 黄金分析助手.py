@@ -354,7 +354,7 @@ class GoldAnalyzerApp:
         left = tk.Frame(main, bg=self.C["bg"])
         left.pack(side="left", fill="y", padx=(0, 10))
         left.pack_propagate(False)
-        left.configure(width=300)
+        left.configure(width=350)
         self._panel_prices(left)
         self._panel_signal(left)
         self._panel_account(left)
