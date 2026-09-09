@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.035 - 完整版
+黄金分析助手 v3.036 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -304,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.035")
+        self.root.title("黄金分析助手 v3.036")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -370,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.035 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.036 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -996,9 +996,9 @@ class GoldAnalyzerApp:
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
-        # 创建三面板：K线图占60%，ATR和MACD各占20%
+        # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[6, 2, 2], hspace=0.1)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 1.5, 1.5], hspace=0.08)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
@@ -1086,7 +1086,9 @@ class GoldAnalyzerApp:
             ax_macd.tick_params(axis='y', labelcolor=self.C["dim"])
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
         
-        self.fig.tight_layout(); self.canvas.draw()
+        # 手动调整子图间距，避免tight_layout警告
+        self.fig.subplots_adjust(hspace=0.08)
+        self.canvas.draw()
     def _update_countdown(self):
         """更新周期倒计时 - 每秒刷新"""
         try:
