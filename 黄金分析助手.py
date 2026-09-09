@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.031 - 完整版
+黄金分析助手 v3.032 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -304,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.031")
+        self.root.title("黄金分析助手 v3.032")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -370,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.031 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.032 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -1049,8 +1049,10 @@ class GoldAnalyzerApp:
         
         # 绘制MACD
         macd_hist = a.get("macd_hist", [])
-        if macd_hist and len(macd_hist) >= n:
-            macd_line = macd_hist[-n:]
+        if macd_hist and len(macd_hist) > 0:
+            macd_line = macd_hist[-n:] if len(macd_hist) >= n else macd_hist
+            # 调整ti长度以匹配macd_line
+            ti = np.arange(len(macd_line))
             # 计算信号线
             signal_line = []
             for i in range(len(macd_line)):
