@@ -338,7 +338,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.2 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.3 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
@@ -354,7 +354,7 @@ class GoldAnalyzerApp:
         left = tk.Frame(main, bg=self.C["bg"])
         left.pack(side="left", fill="y", padx=(0, 10))
         left.pack_propagate(False)
-        left.configure(width=350)
+        left.configure(width=420)
         self._panel_prices(left)
         self._panel_signal(left)
         self._panel_account(left)
@@ -362,9 +362,10 @@ class GoldAnalyzerApp:
         mid = tk.Frame(main, bg=self.C["bg"])
         mid.pack(side="left", fill="both", expand=True, padx=(0, 10))
         mid.pack_propagate(False)
-        mid.configure(width=550)
+        mid.configure(width=480)
         self._panel_chart(mid)
-        # 右列：技术指标+EA控制+价格预警+自动交易（可滚动）
+        self._panel_ea(mid)
+        # 右列：技术指标+价格预警+自动交易（可滚动）
         right = tk.Frame(main, bg=self.C["bg"])
         right.pack(side="left", fill="both", expand=True)
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
@@ -377,7 +378,6 @@ class GoldAnalyzerApp:
         self.right_scroll.pack(side="right", fill="y")
         self.right_canvas.bind("<MouseWheel>", lambda e: self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
         self._panel_indicators(self.right_scrollable)
-        self._panel_ea(self.right_scrollable)
         self._panel_alerts(self.right_scrollable)
         self._panel_auto_trade(self.right_scrollable)
 
