@@ -1076,7 +1076,7 @@ class GoldAnalyzerApp:
             ax_atr.axhline(y=atr_val, color="yellow", linewidth=1, linestyle="--", alpha=0.7, label=f"当前={atr_val:.2f}")
             ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_atr.set_ylabel("ATR", color=self.C["tx"])
-            ax_atr.tick_params(axis='y', labelcolor="purple")
+            ax_atr.tick_params(axis='y', labelcolor=self.C["dim"])
             ax_atr.set_title("ATR 平均真实波幅", color=self.C["tx"], fontsize=9)
         
         # 绘制MACD
