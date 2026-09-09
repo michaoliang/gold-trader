@@ -57,8 +57,6 @@ WINDOW_HEIGHT = int(_cfg.get('Window', 'height', fallback='800'))
 REFRESH_MS = int(_cfg.get('Display', 'refresh_interval_ms', fallback='3000'))
 ALERT_PCT = float(_cfg.get('Alerts', 'price_change_pct', fallback='1.0'))
 ALERT_CD = int(_cfg.get('Alerts', 'cooldown_sec', fallback='120'))
-
-
 class MT5Engine:
     SYMBOLS = {
         "XAUUSDc": "\u9ec4\u91d1",
@@ -84,7 +82,7 @@ class MT5Engine:
         if not self.ok: return None
         r = mt5.copy_rates_from_pos(s, self.TF_MAP.get(tf, mt5.TIMEFRAME_H1), 0, n)
         return np.array([(x['time'],x['open'],x['high'],x['low'],x['close'],x['tick_volume'])
-                        for x in r], dtype=[('t','i8'),('o','f8'),('h','f8'),('l','f8'),('c','f8'),('v','i8')]) if r else None
+                        for x in r], dtype=[('time','i8'),('open','f8'),('high','f8'),('low','f8'),('close','f8'),('tick_volume','i8')]) if r is not None and len(r) > 0 else None
 
     def account(self):
         i = mt5.account_info()
@@ -133,7 +131,7 @@ class MT5Engine:
         return np.mean(tr)
 
     def levels(self, rates):
-        if not rates or len(rates)<20: return None, None
+        if rates is None or len(rates)<20: return None, None
         h = rates['high']; l = rates['low']
         resist, supp = [], []
         for i in range(5, len(h)-5):
@@ -143,7 +141,7 @@ class MT5Engine:
 
     def analyze(self, sym='XAUUSDc', tf='H1'):
         r = self.rates(sym, tf, 100)
-        if not r: return None
+        if r is None or len(r) == 0: return None
         c,h,l = r['close'],r['high'],r['low']
         t = self.tick(sym)
         if not t: return None
@@ -216,7 +214,7 @@ class MT5Engine:
 
     def backtest(self, sym="XAUUSDc", tf="H1"):
         r = self.rates(sym, tf, 200)
-        if not r or len(r) < 50: return None
+        if r is None or len(r) < 50: return None
         c = r["close"]
         ma5 = [np.mean(c[max(0,i-4):i+1]) for i in range(len(c))]
         ma20 = [np.mean(c[max(0,i-19):i+1]) if i >= 19 else None for i in range(len(c))]
@@ -238,7 +236,6 @@ class MT5Engine:
                 "total_return": ret/initial*100, "total_trades": trades,
                 "win_rate": (wins/trades*100) if trades > 0 else 0,
                 "profit_factor": abs(final/initial) if initial > 0 else 0}
-
 
 
 class AlertSystem:
@@ -306,7 +303,7 @@ class GoldAnalyzerApp:
         self._start_refresh()
 
     def _init_vars(self):
-        self.price_vars = {}; self.pcl = {}; self.daily_vars = {}
+        self.price_vars = {}; self.pcl = {}; self.daily_vars = {}; self.daily_lbls = {}
         self.tv = tk.StringVar(value="H1")
         self.sl = tk.StringVar(value="分析中...")
         self.sl_label = None
@@ -389,10 +386,65 @@ class GoldAnalyzerApp:
             tk.Label(row, textvariable=vv, font=("Consolas", 10, "bold"), fg=self.C["accent"], bg=self.C["card"]).pack(side="right", padx=(10, 0))
             dv = tk.StringVar(value="--")
             self.daily_vars[sym] = dv
-            tk.Label(row, textvariable=dv, font=("Consolas", 8), fg=self.C["yellow"], bg=self.C["card"]).pack(side="right", padx=(0, 4))
+            dl = tk.Label(row, textvariable=dv, font=("Consolas", 8), fg=self.C["yellow"], bg=self.C["card"])
+            dl.pack(side="right", padx=(0, 4))
+            self.daily_lbls[sym] = dl
             cl = tk.Frame(row, width=8, height=8, bg=self.C["bg"])
             cl.pack(side="right", padx=4)
             self.pcl[sym] = cl
+    def _panel_signal(self, parent):
+        f = self._frame(parent, '信号分析')
+        tk.Label(f, textvariable=self.sl, font=('Consolas', 11, 'bold'), fg=self.C['yellow'], bg=self.C['card']).pack(pady=(0, 4))
+        tf = tk.Frame(f, bg=self.C['card']); tf.pack(fill='x')
+        for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
+            tk.Button(tf, text=opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
+                      activebackground=self.C['accent'], relief='flat', cursor='hand2',
+                      command=lambda o=opt: self.tv.set(o) or self._signal() or self._chart()).pack(side='left', padx=2)
+        self.sd = tk.Text(f, height=8, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'],
+                          insertbackground=self.C['tx'], relief='flat', state='disabled')
+        self.sd.pack(fill='x', padx=4, pady=(4, 0))
+        qf = tk.Frame(f, bg=self.C['card']); qf.pack(fill='x', padx=4, pady=(4,0))
+        tk.Label(qf, text='快捷交易:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left')
+        self.quick_lot_var = tk.DoubleVar(value=0.01)
+        tk.Spinbox(qf, from_=0.01, to=2.0, increment=0.01, textvariable=self.quick_lot_var, width=6,
+                 font=('Consolas', 9), bg=self.C['bg'], fg=self.C['tx'], relief='flat').pack(side='left', padx=(0,4))
+        tk.Button(qf, text='买入', font=('Consolas', 9, 'bold'), fg='white', bg=self.C['green'], relief='flat', cursor='hand2',
+                 command=lambda: self._quick_trade('buy')).pack(side='left', padx=2)
+        tk.Button(qf, text='卖出', font=('Consolas', 9, 'bold'), fg='white', bg=self.C['red'], relief='flat', cursor='hand2',
+                 command=lambda: self._quick_trade('sell')).pack(side='left', padx=2)
+
+    def _panel_account(self, parent):
+        f = self._frame(parent, '账户信息')
+        grid = tk.Frame(f, bg=self.C['card']); grid.pack(fill='x', padx=6)
+        for i, (k, lbl) in enumerate([('bal','余额'),('eq','权益'),('mg','保证金'),('free','可用'),('prof','盈亏')]):
+            tk.Label(grid, text=lbl, font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).grid(row=i//3, column=i%3, sticky='w', padx=(0,4))
+            self.avars[k] = tk.StringVar(value='--')
+            tk.Label(grid, textvariable=self.avars[k], font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card']).grid(row=i//3, column=i%3, sticky='e')
+        self.pt = tk.Text(f, height=3, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'], relief='flat', state='disabled')
+        self.pt.pack(fill='x', padx=4, pady=(0, 4))
+
+    def _panel_chart(self, parent):
+        f = self._frame(parent, 'K线图表')
+        tf = tk.Frame(f, bg=self.C['card']); tf.pack(fill='x')
+        self.chart_tv = tk.StringVar(value='H1')
+        for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
+            tk.Button(tf, text=opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
+                      activebackground=self.C['accent'], relief='flat', cursor='hand2',
+                      command=lambda o=opt: self.chart_tv.set(o) or self.tv.set(o) or self._chart() or self._signal()).pack(side='left', padx=2)
+        self.fig = Figure(figsize=(10, 5), facecolor=self.C['card'])
+        self.canvas = FigureCanvasTkAgg(self.fig, master=f)
+        self.canvas.get_tk_widget().pack(fill='both', expand=True)
+
+    def _panel_indicators(self, parent):
+        f = self._frame(parent, '技术指标')
+        grid = tk.Frame(f, bg=self.C['card']); grid.pack(fill='x', padx=6)
+        items = [('MA5',self.ivars['ma5']),('MA10',self.ivars['ma10']),('MA20',self.ivars['ma20']),('MA50',self.ivars['ma50']),
+                 ('RSI',self.ivars['rsi']),('MACD',self.ivars['macd']),('布林上',self.ivars['bbu']),('布林下',self.ivars['bbl']),('ATR',self.ivars['atr']),('波动',self.vv)]
+        for i, (lbl, var) in enumerate(items):
+            tk.Label(grid, text=lbl, font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).grid(row=i//5, column=i%5, sticky='w', padx=(0,4))
+            tk.Label(grid, textvariable=var, font=('Consolas', 9), fg=self.C['accent'], bg=self.C['card']).grid(row=i//5, column=i%5, sticky='e')
+
+
     def _refresh(self):
         if self.stop: return
         if not self.anz.ok:
@@ -427,7 +479,7 @@ class GoldAnalyzerApp:
                         dsg = "+" if dch >= 0 else ""
                         dco = self.C["green"] if dch >= 0 else self.C["red"]
                         self.daily_vars[sym].set(f"[日{dsg}{dpct:.2f}%]")
-                        self.daily_vars[sym].config(fg=dco)
+                        self.daily_lbls[sym].config(fg=dco)
             self._signal()
             self._account()
             self._chart()
@@ -575,14 +627,14 @@ class GoldAnalyzerApp:
         d = f"Trend: {a['trend']}\nScore: Buy {a['bs']} | Sell {a['ss']}\n"
         if a["sup"]: d += f"Support: ${a['sup']:.1f}  Resistance: ${a['res']:.1f}\n"
         d += "\n"
-        for n, l in a["sig"]:
+        for n, l in a["signals"]:
             lc = self.C["green"] if l in ("买入", "偏多", "强势") else (self.C["red"] if l in ("卖出", "偏空", "强势") else self.C["yellow"])
             d += f"* {n}: {l}\n"
         self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
-        self.ivars["ma5"].set(f"{a['ma']['5']:.2f}")
-        self.ivars["ma10"].set(f"{a['ma']['10']:.2f}")
-        self.ivars["ma20"].set(f"{a['ma']['20']:.2f}")
-        self.ivars["ma50"].set(f"{a['ma']['50']:.2f}")
+        self.ivars["ma5"].set(f"{a['ma'][5]:.2f}")
+        self.ivars["ma10"].set(f"{a['ma'][10]:.2f}")
+        self.ivars["ma20"].set(f"{a['ma'][20]:.2f}")
+        self.ivars["ma50"].set(f"{a['ma'][50]:.2f}")
         self.ivars["rsi"].set(f"{a['rsi']:.1f}")
         self.ivars["macd"].set(f"{a['macd']:.2f}")
         if a["bb"]:
@@ -599,7 +651,6 @@ class GoldAnalyzerApp:
                 self.avars[short].set("${:,.2f}".format(i[k]))
             p = i["profit"]
             self.avars["prof"].set("${:+,.2f}".format(p))
-            self.plbl.config(fg=self.C["green"] if p >= 0 else self.C["red"])
             pos = mt5.positions_get(symbol="XAUUSDc")
             ps = list(pos) if pos is not None and len(pos) > 0 else []
             txt = ""
@@ -619,7 +670,7 @@ class GoldAnalyzerApp:
             self.pt.delete("1.0", "end")
             self.pt.insert("1.0", txt)
             self.pt.config(state="disabled")
-            self.plbl.config(text="有持仓" if ps else "无持仓", fg=self.C["green"] if ps else self.C["dim"])
+            
         except Exception as e:
             self.pt.config(state="normal")
             self.pt.delete("1.0", "end")
@@ -630,8 +681,8 @@ class GoldAnalyzerApp:
         self.fig.clear(); a = self.anz.analyze("XAUUSDc", self.tv.get())
         if not a or a.get("rates") is None: return
         r = a["rates"]; n = min(len(r), 80)
-        ti = np.arange(n); cl = r[-n:]["c"]; op = r[-n:]["o"]
-        hi = r[-n:]["h"]; lo = r[-n:]["l"]
+        ti = np.arange(n); cl = r[-n:]["close"]; op = r[-n:]["open"]
+        hi = r[-n:]["high"]; lo = r[-n:]["low"]
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")

@@ -1,0 +1,8 @@
+﻿@__pycache__/
+*.pyc
+*.log
+debug.log
+err.txt
+out.txt
+*_b64*.txt
+
