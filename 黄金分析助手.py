@@ -849,8 +849,15 @@ class GoldAnalyzerApp:
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
+        # 添加价格横线
+        if a.get("price"):
+            if self.price_line:
+                self.price_line.set_ydata([a["price"], a["price"]])
+            else:
+                self.price_line = ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
-        ax.set_title(f"XAUUSDc {self.tv.get()}  当前: {a['price']:.2f}", color=self.C["tx"], fontsize=10)
+        countdown_str = self.countdown_var.get() if hasattr(self, "countdown_var") else "--:--"
+        ax.set_title("XAUUSDc " + self.tv.get() + "  当前: " + f"{a['price']:.2f}" + "  倒计时: " + countdown_str, color=self.C["tx"], fontsize=10)
         ax.tick_params(colors=self.C["dim"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
