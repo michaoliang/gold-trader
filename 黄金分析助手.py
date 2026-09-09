@@ -52,8 +52,8 @@ AUTO_LOT = float(_cfg.get('AutoTrade', 'lot_size', fallback='0.01'))
 AUTO_RSI_BUY = int(_cfg.get('AutoTrade', 'rsi_buy', fallback='30'))
 AUTO_RSI_SELL = int(_cfg.get('AutoTrade', 'rsi_sell', fallback='70'))
 AUTO_MAX_POS = int(_cfg.get('AutoTrade', 'max_positions', fallback='3'))
-WINDOW_WIDTH = int(_cfg.get('Window', 'width', fallback='1600'))
-WINDOW_HEIGHT = int(_cfg.get('Window', 'height', fallback='800'))
+WINDOW_WIDTH = int(_cfg.get('Window', 'width', fallback='1920'))
+WINDOW_HEIGHT = int(_cfg.get('Window', 'height', fallback='1080'))
 REFRESH_MS = int(_cfg.get('Display', 'refresh_interval_ms', fallback='3000'))
 ALERT_PCT = float(_cfg.get('Alerts', 'price_change_pct', fallback='1.0'))
 ALERT_CD = int(_cfg.get('Alerts', 'cooldown_sec', fallback='120'))
@@ -332,13 +332,12 @@ class GoldAnalyzerApp:
 
     def _build_ui(self):
         self.root.configure(bg=self.C["bg"])
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
-        self.root.update_idletasks()
-        sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
+        # 全屏启动，ESC 退出全屏
+        self.root.attributes("-fullscreen", True)
+        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
         tf = tk.Frame(self.root, bg=self.C["bg"])
-        tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="HJ ANALYZER  v3.0", font=("Consolas", 14, "bold"),
+        tf.pack(fill="x", padx=20, pady=(8, 4))
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.1 \u26a1", font=("Consolas", 13, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
@@ -347,17 +346,24 @@ class GoldAnalyzerApp:
                  fg=self.C["dim"], bg=self.C["bg"]).pack(side="left", padx=(20, 0))
         tk.Label(tf, textvariable=self.target_var, font=("Consolas", 9),
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(20, 0))
+        # 三列布局
         main = tk.Frame(self.root, bg=self.C["bg"])
-        main.pack(fill="both", expand=True, padx=16, pady=6)
+        main.pack(fill="both", expand=True, padx=12, pady=6)
+        # 左列：行情+信号+账户 (300px)
         left = tk.Frame(main, bg=self.C["bg"])
-        left.pack(side="left", fill="y", padx=(0, 10), anchor="nw")
+        left.pack(side="left", fill="y", padx=(0, 8))
         left.pack_propagate(False)
-        left.configure(width=360)
+        left.configure(width=300)
         self._panel_prices(left)
         self._panel_signal(left)
         self._panel_account(left)
+        # 中列：K线图表（填充剩余空间）
+        mid = tk.Frame(main, bg=self.C["bg"])
+        mid.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        self._panel_chart(mid)
+        # 右列：指标+EA+预警+交易+回测（可滚动）
         right = tk.Frame(main, bg=self.C["bg"])
-        right.pack(side="left", fill="both", expand=True, padx=(10, 16))
+        right.pack(side="left", fill="both", expand=True)
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
         self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
@@ -367,9 +373,8 @@ class GoldAnalyzerApp:
         self.right_canvas.pack(side="left", fill="both", expand=True)
         self.right_scroll.pack(side="right", fill="y")
         self.right_canvas.bind("<MouseWheel>", lambda e: self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-        self._panel_chart(self.right_scrollable)
-        self._panel_ea(self.right_scrollable)
         self._panel_indicators(self.right_scrollable)
+        self._panel_ea(self.right_scrollable)
         self._panel_alerts(self.right_scrollable)
         self._panel_auto_trade(self.right_scrollable)
         self._panel_backtest(self.right_scrollable)
@@ -438,27 +443,119 @@ class GoldAnalyzerApp:
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
 
     def _panel_indicators(self, parent):
-        f = self._frame(parent, '技术指标')
-        # 科技感布局：双列显示，带状态标签
-        cf = tk.Frame(f, bg=self.C['card'])
-        cf.pack(fill='x', padx=10, pady=6)
-        # 左列
-        lf = tk.Frame(cf, bg=self.C['card'])
-        lf.pack(side='left', fill='x', expand=True)
-        for lbl, var in [('MA5',self.ivars['ma5']),('MA10',self.ivars['ma10']),('MA20',self.ivars['ma20']),('MA50',self.ivars['ma50']),('RSI',self.ivars['rsi'])]:
-            rf = tk.Frame(lf, bg=self.C['card'])
-            rf.pack(fill='x', pady=2)
-            tk.Label(rf, text=lbl, font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], width=6, anchor='w').pack(side='left')
-            tk.Label(rf, textvariable=var, font=('Consolas', 9, 'bold'), fg=self.C['accent'], bg=self.C['card'], anchor='e').pack(side='right', expand=True)
-        # 右列
-        rf2 = tk.Frame(cf, bg=self.C['card'])
-        rf2.pack(side='left', fill='x', expand=True, padx=(10, 0))
-        for lbl, var in [('MACD',self.ivars['macd']),('布林上',self.ivars['bbu']),('布林下',self.ivars['bbl']),('ATR',self.ivars['atr']),('波动',self.vv)]:
-            rf = tk.Frame(rf2, bg=self.C['card'])
-            rf.pack(fill='x', pady=2)
-            tk.Label(rf, text=lbl, font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], width=6, anchor='w').pack(side='left')
-            tk.Label(rf, textvariable=var, font=('Consolas', 9, 'bold'), fg=self.C['green'], bg=self.C['card'], anchor='e').pack(side='right', expand=True)
-
+        f = self._frame(parent, "技术指标")
+        
+        # ===== 布林带可视化面板 =====
+        bbf = tk.LabelFrame(f, text="📊 布林带 BOLL(20,2)", font=("Consolas", 9, "bold"),
+                           fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6)
+        bbf.pack(fill="x", padx=6, pady=4)
+        
+        # 布林带三轨显示
+        bf = tk.Frame(bbf, bg=self.C["card"])
+        bf.pack(fill="x")
+        
+        # 上轨
+        uf = tk.Frame(bf, bg=self.C["card"])
+        uf.pack(fill="x", pady=2)
+        tk.Label(uf, text="上轨 UPPER:", font=("Consolas", 8), fg=self.C["red"], bg=self.C["card"]).pack(side="left")
+        self.bb_upper_var = tk.StringVar(value="--")
+        tk.Label(uf, textvariable=self.bb_upper_var, font=("Consolas", 9, "bold"), fg=self.C["red"], bg=self.C["card"]).pack(side="right")
+        
+        # 中轨
+        mf = tk.Frame(bf, bg=self.C["card"])
+        mf.pack(fill="x", pady=2)
+        tk.Label(mf, text="中轨 MIDDLE:", font=("Consolas", 8), fg=self.C["accent"], bg=self.C["card"]).pack(side="left")
+        self.bb_mid_var = tk.StringVar(value="--")
+        tk.Label(mf, textvariable=self.bb_mid_var, font=("Consolas", 9, "bold"), fg=self.C["accent"], bg=self.C["card"]).pack(side="right")
+        
+        # 下轨
+        lf = tk.Frame(bf, bg=self.C["card"])
+        lf.pack(fill="x", pady=2)
+        tk.Label(lf, text="下轨 LOWER:", font=("Consolas", 8), fg=self.C["green"], bg=self.C["card"]).pack(side="left")
+        self.bb_lower_var = tk.StringVar(value="--")
+        tk.Label(lf, textvariable=self.bb_lower_var, font=("Consolas", 9, "bold"), fg=self.C["green"], bg=self.C["card"]).pack(side="right")
+        
+        # 价格位置指示器
+        pf = tk.Frame(bbf, bg=self.C["card"])
+        pf.pack(fill="x", pady=4)
+        tk.Label(pf, text="价格位置:", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack(side="left")
+        self.bb_pos_var = tk.StringVar(value="--")
+        tk.Label(pf, textvariable=self.bb_pos_var, font=("Consolas", 9, "bold"), fg=self.C["yellow"], bg=self.C["card"]).pack(side="right")
+        
+        # 布林带宽度
+        wf = tk.Frame(bbf, bg=self.C["card"])
+        wf.pack(fill="x", pady=2)
+        tk.Label(wf, text="带宽 WIDTH:", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack(side="left")
+        self.bb_width_var = tk.StringVar(value="--")
+        tk.Label(wf, textvariable=self.bb_width_var, font=("Consolas", 9), fg=self.C["tx"], bg=self.C["card"]).pack(side="right")
+        
+        # ===== RSI 可视化 =====
+        rsif = tk.LabelFrame(f, text="📈 RSI 相对强弱指数", font=("Consolas", 9, "bold"),
+                            fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6)
+        rsif.pack(fill="x", padx=6, pady=4)
+        
+        rsif2 = tk.Frame(rsif, bg=self.C["card"])
+        rsif2.pack(fill="x")
+        tk.Label(rsif2, text="数值:", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack(side="left")
+        self.rsi_val_var = tk.StringVar(value="--")
+        tk.Label(rsif2, textvariable=self.rsi_val_var, font=("Consolas", 11, "bold"), fg=self.C["accent"], bg=self.C["card"]).pack(side="left", padx=(0, 20))
+        
+        # RSI状态标签
+        self.rsi_state_var = tk.StringVar(value="中性")
+        tk.Label(rsif2, textvariable=self.rsi_state_var, font=("Consolas", 9, "bold"), 
+                bg=self.C["card"], relief="solid", bd=1, padx=8, pady=2).pack(side="right")
+        
+        # ===== MACD 可视化 =====
+        macdf = tk.LabelFrame(f, text="📉 MACD 指数平滑异同移动平均", font=("Consolas", 9, "bold"),
+                             fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6)
+        macdf.pack(fill="x", padx=6, pady=4)
+        
+        macdf2 = tk.Frame(macdf, bg=self.C["card"])
+        macdf2.pack(fill="x")
+        tk.Label(macdf2, text="MACD值:", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack(side="left")
+        self.macd_val_var = tk.StringVar(value="--")
+        tk.Label(macdf2, textvariable=self.macd_val_var, font=("Consolas", 11, "bold"), fg=self.C["accent"], bg=self.C["card"]).pack(side="left", padx=(0, 20))
+        
+        self.macd_state_var = tk.StringVar(value="观望")
+        tk.Label(macdf2, textvariable=self.macd_state_var, font=("Consolas", 9, "bold"),
+                bg=self.C["card"], relief="solid", bd=1, padx=8, pady=2).pack(side="right")
+        
+        # ===== MA系统可视化 =====
+        maf = tk.LabelFrame(f, text="📊 MA 移动平均线系统", font=("Consolas", 9, "bold"),
+                           fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6)
+        maf.pack(fill="x", padx=6, pady=4)
+        
+        ma_grid = tk.Frame(maf, bg=self.C["card"])
+        ma_grid.pack(fill="x")
+        
+        # MA排列状态
+        self.ma_trend_var = tk.StringVar(value="--")
+        tk.Label(ma_grid, text="排列:", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack(side="left")
+        tk.Label(ma_grid, textvariable=self.ma_trend_var, font=("Consolas", 10, "bold"),
+                bg=self.C["card"], relief="solid", bd=1, padx=10, pady=3).pack(side="left", padx=(0, 20))
+        
+        # MA数值
+        for i, (name, var) in enumerate([("MA5", self.ivars["ma5"]), ("MA10", self.ivars["ma10"]), 
+                                          ("MA20", self.ivars["ma20"]), ("MA50", self.ivars["ma50"])]):
+            mf2 = tk.Frame(ma_grid, bg=self.C["card"])
+            mf2.pack(side="left", padx=5)
+            tk.Label(mf2, text=name+":", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack()
+            tk.Label(mf2, textvariable=var, font=("Consolas", 9, "bold"), fg=self.C["tx"], bg=self.C["card"]).pack()
+        
+        # ===== ATR波动率 =====
+        atrf = tk.LabelFrame(f, text="⚡ ATR 平均真实波幅", font=("Consolas", 9, "bold"),
+                            fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6)
+        atrf.pack(fill="x", padx=6, pady=4)
+        
+        atrf2 = tk.Frame(atrf, bg=self.C["card"])
+        atrf2.pack(fill="x")
+        tk.Label(atrf2, text="ATR:", font=("Consolas", 8), fg=self.C["dim"], bg=self.C["card"]).pack(side="left")
+        self.atr_val_var = tk.StringVar(value="--")
+        tk.Label(atrf2, textvariable=self.atr_val_var, font=("Consolas", 11, "bold"), fg=self.C["accent"], bg=self.C["card"]).pack(side="left", padx=(0, 20))
+        
+        self.vol_state_var = tk.StringVar(value="--")
+        tk.Label(atrf2, textvariable=self.vol_state_var, font=("Consolas", 9, "bold"),
+                bg=self.C["card"], relief="solid", bd=1, padx=8, pady=2).pack(side="right")
 
     def _refresh(self):
         if self.stop: return
