@@ -306,6 +306,8 @@ class GoldAnalyzerApp:
         self.price_vars = {}; self.pcl = {}; self.daily_vars = {}; self.daily_lbls = {}
         self.tv = tk.StringVar(value="H1")
         self.sl = tk.StringVar(value="分析中...")
+        self.price_line = None  # 价格横线
+        self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
         self.sl_label = None
         self.avars = {}
         for k in ['bal','eq','mg','free','prof']: self.avars[k] = tk.StringVar(value='--')
@@ -597,6 +599,7 @@ class GoldAnalyzerApp:
             self._signal()
             self._account()
             self._chart()
+            self._update_countdown()
             self._check_alerts()
             if self.auto_on: self._auto_trade_step()
             self._check_ea_status()
@@ -839,6 +842,24 @@ class GoldAnalyzerApp:
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
         self.fig.tight_layout(); self.canvas.draw()
+    def _update_countdown(self):
+        """更新周期倒计时"""
+        try:
+            tf = self.tv.get()
+            if not tf: return
+            # 计算当前周期剩余时间
+            now = datetime.now()
+            period_secs = {"M1": 60, "M5": 300, "M6": 360, "M15": 900, "M30": 1800, "H1": 3600, "H4": 14400, "D1": 86400}.get(tf, 3600)
+            # 计算当前周期已过时间
+            epoch = now.timestamp()
+            elapsed = epoch % period_secs
+            remaining = int(period_secs - elapsed)
+            mins = remaining // 60
+            secs = remaining % 60
+            self.countdown_var.set(f"{mins:02d}:{secs:02d}")
+        except:
+            pass
+
     def _select_mt5_path(self):
         import tkinter.filedialog as fd
         path = fd.askdirectory(title='选择MT5终端目录')
