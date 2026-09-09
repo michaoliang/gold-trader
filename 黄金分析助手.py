@@ -144,6 +144,20 @@ class MT5Engine:
         m = np.mean(c[-p:]); sd = np.std(c[-p:])
         return m+k*sd, m, m-k*sd
 
+    def atr_history(self, h, l, c, p=14):
+        """计算历史ATR数组"""
+        if len(h) < p+1: return []
+        tr = []
+        for i in range(len(h)):
+            if i == 0:
+                tr.append(h[i] - l[i])
+            else:
+                tr.append(max(h[i]-l[i], abs(h[i]-c[i-1]), abs(l[i]-c[i-1])))
+        atr_arr = [tr[0]]
+        for i in range(1, len(tr)):
+            atr_arr.append((atr_arr[-1] * (p-1) + tr[i]) / p)
+        return atr_arr
+
     def atr(self, h, l, c, p=14):
         if len(h)<p+1: return 0
         tr = [max(h[i]-l[i], abs(h[i]-c[i-1]), abs(l[i]-c[i-1])) for i in range(-p,0)]
@@ -169,6 +183,7 @@ class MT5Engine:
         m, ms, mh = self.macd(c)  # m=当前值, ms=信号线, mh=历史值列表
         bb = self.bb(c)
         atr = self.atr(h,l,c)
+        atr_hist = self.atr_history(h,l,c)
         res, sup = self.levels(r)
         sig, trend = [], ""
         if ma[5]>ma[10]>ma[20]: trend,sig="强势上涨",[("MA Bullish","Strong")]
@@ -998,7 +1013,7 @@ class GoldAnalyzerApp:
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
         # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 1.5, 1.5], hspace=0.08)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 1.5, 1.5], hspace=0.18)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
@@ -1053,9 +1068,12 @@ class GoldAnalyzerApp:
         # 绘制ATR波动率
         atr_val = a.get("atr", 0)
         atr_pct = a.get("atr_pct", 0)
-        if atr_val > 0:
-            ax_atr.plot(ti, [atr_val] * len(ti), "purple", linewidth=1.5, label=f"ATR={atr_val:.2f} ({atr_pct:.2f}%)")
-            ax_atr.fill_between(ti, 0, atr_val, alpha=0.3, color="purple")
+        atr_hist = a.get("atr_hist", [])
+        if atr_hist and len(atr_hist) > 0:
+            disp_len = min(len(atr_hist), len(ti))
+            ax_atr.plot(ti[-disp_len:], atr_hist[-disp_len:], "purple", linewidth=1.5, label="ATR")
+            ax_atr.fill_between(ti[-disp_len:], 0, atr_hist[-disp_len:], alpha=0.3, color="purple")
+            ax_atr.axhline(y=atr_val, color="yellow", linewidth=1, linestyle="--", alpha=0.7, label=f"当前={atr_val:.2f}")
             ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_atr.set_ylabel("ATR", color="purple")
             ax_atr.tick_params(axis='y', labelcolor="purple")
@@ -1087,7 +1105,7 @@ class GoldAnalyzerApp:
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
         
         # 手动调整子图间距，避免tight_layout警告
-        self.fig.subplots_adjust(hspace=0.08)
+        self.fig.subplots_adjust(hspace=0.18)
         self.canvas.draw()
     def _update_countdown(self):
         """更新周期倒计时 - 每秒刷新"""
