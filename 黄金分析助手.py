@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 黄金分析助手 v3.036 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
@@ -213,7 +213,7 @@ class MT5Engine:
         else: ov=("观望","gray")
         return {'sym':sym,'name':self.SYMBOLS.get(sym,sym),'price':t.bid,'ask':t.ask,
                 'spread':t.ask-t.bid,'trend':trend,'ma':ma,'rsi':rsi,'macd':m,'macd_hist':mh,
-                'bb':bb,'atr':atr,'atr_pct':ap,'vol':vl,'signals':sig,'overall':ov,
+                'bb':bb,'atr':atr,'atr_hist':atr_hist,'atr_pct':ap,'vol':vl,'signals':sig,'overall':ov,
                 'bs':bs,'ss':ss,'res':res,'sup':sup,'closes':c,'rates':r}
     def connect(self):
         if getattr(self, "_connecting", False): return
@@ -1274,4 +1274,5 @@ if __name__ == "__main__":
     app = GoldAnalyzerApp(root)
     root.protocol("WM_DELETE_WINDOW", app._close)
     root.mainloop()
+
 
