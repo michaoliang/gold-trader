@@ -332,12 +332,13 @@ class GoldAnalyzerApp:
 
     def _build_ui(self):
         self.root.configure(bg=self.C["bg"])
-        # 全屏启动，ESC 退出全屏
-        self.root.attributes("-fullscreen", True)
-        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
+        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.root.update_idletasks()
+        sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
-        tf.pack(fill="x", padx=20, pady=(8, 4))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.1 \u26a1", font=("Consolas", 13, "bold"),
+        tf.pack(fill="x", padx=20, pady=(10, 5))
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.1 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
                  fg=self.C["yellow"], bg=self.C["bg"])
@@ -346,39 +347,25 @@ class GoldAnalyzerApp:
                  fg=self.C["dim"], bg=self.C["bg"]).pack(side="left", padx=(20, 0))
         tk.Label(tf, textvariable=self.target_var, font=("Consolas", 9),
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(20, 0))
-        # 三列布局
+        # 两列布局
         main = tk.Frame(self.root, bg=self.C["bg"])
-        main.pack(fill="both", expand=True, padx=12, pady=6)
+        main.pack(fill="both", expand=True, padx=16, pady=6)
         # 左列：行情+信号+账户 (300px)
         left = tk.Frame(main, bg=self.C["bg"])
-        left.pack(side="left", fill="y", padx=(0, 8))
+        left.pack(side="left", fill="y", padx=(0, 10))
         left.pack_propagate(False)
         left.configure(width=300)
         self._panel_prices(left)
         self._panel_signal(left)
         self._panel_account(left)
-        # 中列：K线图表（填充剩余空间）
+        # 中列：K线图表+EA控制+价格预警+自动交易
         mid = tk.Frame(main, bg=self.C["bg"])
-        mid.pack(side="left", fill="both", expand=True, padx=(0, 8))
+        mid.pack(side="left", fill="both", expand=True)
         self._panel_chart(mid)
-        # 右列：指标+EA+预警+交易+回测（可滚动）
-        right = tk.Frame(main, bg=self.C["bg"])
-        right.pack(side="left", fill="both", expand=True)
-        self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
-        self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
-        self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
-        self.right_scrollable.bind("<Configure>", lambda e: self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all")))
-        self.right_canvas.create_window((0, 0), window=self.right_scrollable, anchor="nw")
-        self.right_canvas.configure(yscrollcommand=self.right_scroll.set)
-        self.right_canvas.pack(side="left", fill="both", expand=True)
-        self.right_scroll.pack(side="right", fill="y")
-        self.right_canvas.bind("<MouseWheel>", lambda e: self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-        self._panel_indicators(self.right_scrollable)
-        self._panel_ea(self.right_scrollable)
-        self._panel_alerts(self.right_scrollable)
-        self._panel_auto_trade(self.right_scrollable)
-        self._panel_backtest(self.right_scrollable)
-
+        self._panel_ea(mid)
+        self._panel_alerts(mid)
+        self._panel_auto_trade(mid)
+        self._panel_indicators(mid)
     def _panel_prices(self, parent):
         f = self._frame(parent, "实时行情")
         for sym, name in MT5Engine.SYMBOLS.items():
@@ -718,17 +705,6 @@ class GoldAnalyzerApp:
                  font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], wraplength=500).pack(anchor='w')
         self._check_ea_status()
 
-    def _panel_backtest(self, parent):
-        f = self._frame(parent, "历史回测 (MA交叉+RSI过滤)")
-        tf = tk.Frame(f, bg=self.C["card"]); tf.pack(fill="x", padx=8)
-        tk.Label(tf, text="周期:", font=("Consolas", 9), fg=self.C["dim"], bg=self.C["card"]).pack(side="left", padx=(0,4))
-        bt_tf = tk.StringVar(value="H1")
-        for opt in ["M15","M30","H1","H4"]:
-            tk.Radiobutton(tf, text=opt, variable=bt_tf, value=opt, bg=self.C["card"], fg=self.C["tx"], selectcolor=self.C["bd"]).pack(side="left", padx=4)
-        tk.Button(tf, text="执行回测", command=lambda: self._run_backtest(bt_tf),
-                  bg=self.C["accent"], fg=self.C["bg"], font=("Consolas", 9), cursor="hand2", relief="flat", width=8).pack(side="left", padx=8)
-        self.bt_result = tk.Text(f, height=8, font=("Consolas", 9), fg=self.C["tx"], bg=self.C["card"], relief="flat", state="disabled")
-        self.bt_result.pack(fill="x", padx=8, pady=(4, 0))
     def _signal(self):
         a = self.anz.analyze("XAUUSDc", self.tv.get())
         if not a: return
