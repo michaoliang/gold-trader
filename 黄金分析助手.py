@@ -1013,7 +1013,7 @@ class GoldAnalyzerApp:
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
         # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 1.5, 1.5], hspace=0.05)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 1.5, 1.5], hspace=0.12)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
@@ -1105,7 +1105,7 @@ class GoldAnalyzerApp:
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
         
         # 手动调整子图间距，避免tight_layout警告
-        self.fig.subplots_adjust(hspace=0.05)
+        self.fig.subplots_adjust(hspace=0.12)
         self.canvas.draw()
     def _update_countdown(self):
         """更新周期倒计时 - 每秒刷新"""
@@ -1274,6 +1274,7 @@ if __name__ == "__main__":
     app = GoldAnalyzerApp(root)
     root.protocol("WM_DELETE_WINDOW", app._close)
     root.mainloop()
+
 
 
 
