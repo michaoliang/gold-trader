@@ -307,6 +307,7 @@ class GoldAnalyzerApp:
         self.tv = tk.StringVar(value="H1")
         self.sl = tk.StringVar(value="分析中...")
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
+        self.countdown_annot = None  # 倒计时标注对象
         self.sl_label = None
         self.avars = {}
         for k in ['bal','eq','mg','free','prof']: self.avars[k] = tk.StringVar(value='--')
@@ -736,7 +737,7 @@ class GoldAnalyzerApp:
         if self.sl_label: self.sl_label.config(text=txt, fg=cm.get(col, self.C["yellow"]))
         else: self.sl.set(txt)
         # 简体中文 + 科技感样式
-        trend_cn = {"上涨": "\U0001f4c8 上升趋势", "下跌": "\U0001f4c9 下降趋势", "盘整": "\u27a1\ufe0f 横盘整理"}.get(a["trend"], a["trend"])
+        trend_cn = {"上涨": "\U0001f4c8 上升趋势", "下跌": "\U0001f4c9 下降趋势", "盘整": "\u27a1️ 横盘整理"}.get(a["trend"], a["trend"])
         d = "\u250c\u2500 趋势分析 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n"
         d += "| " + trend_cn + " " * (20 - len(trend_cn)) + " |\n"
         d += "| 多头得分: {:<3} |  空头得分: {:<3}   |\n".format(a["bs"], a["ss"])
@@ -905,8 +906,11 @@ class GoldAnalyzerApp:
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
         # 添加倒计时显示
-        countdown_str = self.countdown_var.get() if hasattr(self, "countdown_var") else "--:--"
-        ax.annotate(f"倒计时: {countdown_str}", xy=(1, 0.95), xycoords="axes fraction", fontsize=10,
+        countdown_str = self.countdown_var.get()
+        if self.countdown_annot:
+            self.countdown_annot.set_text(f"倒计时: {countdown_str}")
+        else:
+            self.countdown_annot = ax.annotate(f"倒计时: {countdown_str}", xy=(1, 0.95), xycoords="axes fraction", fontsize=10,
                     ha="right", va="top", color=self.C["yellow"], fontweight="bold")
         ax.set_title("XAUUSDc " + self.tv.get() + "  当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
         ax.tick_params(colors=self.C["dim"])
@@ -929,6 +933,9 @@ class GoldAnalyzerApp:
             mins = remaining // 60
             secs = remaining % 60
             self.countdown_var.set(f"{mins:02d}:{secs:02d}")
+            if self.countdown_annot:
+                self.countdown_annot.set_text(f"倒计时: {self.countdown_var.get()}")
+                self.canvas.draw()
         except:
             pass
 
