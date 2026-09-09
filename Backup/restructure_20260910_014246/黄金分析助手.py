@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.057 - 完整版
+黄金分析助手 v3.059 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -319,7 +319,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.057")
+        self.root.title("黄金分析助手 v3.059")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -337,13 +337,16 @@ class GoldAnalyzerApp:
         self._init_vars()
         self._build_ui()
         self._initialized = True
-        self._set_period(self.tv.get())
+        self._set_period_m1('M1')
+        self._set_period_h1('H1')
         self._start_refresh()
 
     def _init_vars(self):
         self.price_vars = {}; self.pcl = {}; self.daily_vars = {}; self.daily_lbls = {}
         self.tv = tk.StringVar(value="M1")
         self.sl = tk.StringVar(value="分析中...")
+        self.period_btns_m1 = []
+        self.period_btns_h1 = []
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
         self.countdown_annot = None  # 倒计时标注对象
         self.sl_label = None
@@ -387,7 +390,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.057 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.059 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -401,25 +404,22 @@ class GoldAnalyzerApp:
         self.target_bar_fr.pack(side="left", fill="y")
         tk.Label(tf, textvariable=self.target_var, font=("Consolas", 8, "bold"),
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(5, 0))
-        # 三列布局
+        # 新三列布局：M1图表 | H1图表 | 可折叠面板
         main = tk.Frame(self.root, bg=self.C["bg"])
         main.pack(fill="both", expand=True, padx=16, pady=6)
-        # 左列：行情+信号+账户 (350px)
+        # 左列：M1 K线图 (固定宽度600px)
         left = tk.Frame(main, bg=self.C["bg"])
-        left.pack(side="left", fill="y", padx=(0, 10))
+        left.pack(side="left", fill="both", padx=(0, 8))
         left.pack_propagate(False)
-        left.configure(width=420)
-        self._panel_prices(left)
-        self._panel_signal(left)
-        self._panel_account(left)
-        # 中列：K线图表（固定宽度）
+        left.configure(width=600)
+        self._panel_chart_m1(left)
+        # 中列：H1 K线图 (固定宽度600px)
         mid = tk.Frame(main, bg=self.C["bg"])
-        mid.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        mid.pack(side="left", fill="both", padx=(0, 8))
         mid.pack_propagate(False)
-        mid.configure(width=480)
-        self._panel_chart(mid)
-        self._panel_ea(mid)
-        # 右列：技术指标+价格预警+自动交易（可滚动）
+        mid.configure(width=600)
+        self._panel_chart_h1(mid)
+        # 右列：可滚动面板（可折叠区域）
         right = tk.Frame(main, bg=self.C["bg"])
         right.pack(side="left", fill="both", expand=True)
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
@@ -431,9 +431,9 @@ class GoldAnalyzerApp:
         self.right_canvas.pack(side="left", fill="both", expand=True)
         self.right_scroll.pack(side="right", fill="y")
         self.right_canvas.bind("<MouseWheel>", lambda e: self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-        self._panel_indicators(self.right_scrollable)
-        self._panel_alerts(self.right_scrollable)
-        self._panel_auto_trade(self.right_scrollable)
+        
+        # 右侧折叠面板
+        self._build_right_panels()
 
     def _panel_prices(self, parent):
         f = self._frame(parent, "实时行情")
@@ -550,7 +550,8 @@ class GoldAnalyzerApp:
     def _panel_chart(self, parent):
         f = self._frame(parent, 'K线图表')
         tf = tk.Frame(f, bg=self.C['card']); tf.pack(fill='x')
-        self.chart_tv = tk.StringVar(value='M1')
+        self.chart_tv_m1 = tk.StringVar(value='M1')
+        self.chart_tv_h1 = tk.StringVar(value='H1')
         for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
             tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
                       activebackground=self.C['accent'], relief='flat', cursor='hand2',
@@ -558,6 +559,220 @@ class GoldAnalyzerApp:
         self.fig = Figure(figsize=(12, 14), facecolor=self.C['card'])
         self.canvas = FigureCanvasTkAgg(self.fig, master=f)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
+
+
+    def _panel_chart_m1(self, parent):
+        """M1周期图表面板"""
+        f = self._frame(parent, 'M1 K线图表')
+        tf = tk.Frame(f, bg=self.C['card']); tf.pack(fill='x')
+        self.chart_tv_m1 = tk.StringVar(value='M1')
+        for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
+            btn = tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
+                      activebackground=self.C['accent'], relief='flat', cursor='hand2',
+                      command=lambda o=opt: self._set_period_m1(o))
+            btn.pack(side='left', padx=4)
+            self.period_btns_m1.append(btn)
+        self._set_period_m1('M1')
+        self.fig_m1 = Figure(figsize=(6, 7), facecolor=self.C['card'])
+        self.canvas_m1 = FigureCanvasTkAgg(self.fig_m1, master=f)
+        self.canvas_m1.get_tk_widget().pack(fill='both', expand=True)
+
+    def _panel_chart_h1(self, parent):
+        """H1周期图表面板"""
+        f = self._frame(parent, 'H1 K线图表')
+        tf = tk.Frame(f, bg=self.C['card']); tf.pack(fill='x')
+        self.chart_tv_h1 = tk.StringVar(value='H1')
+        for opt in ['M1','M5','M6','M15','M30','H1','H4','D1']:
+            btn = tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
+                      activebackground=self.C['accent'], relief='flat', cursor='hand2',
+                      command=lambda o=opt: self._set_period_h1(o))
+            btn.pack(side='left', padx=4)
+            self.period_btns_h1.append(btn)
+        self._set_period_h1('H1')
+        self.fig_h1 = Figure(figsize=(6, 7), facecolor=self.C['card'])
+        self.canvas_h1 = FigureCanvasTkAgg(self.fig_h1, master=f)
+        self.canvas_h1.get_tk_widget().pack(fill='both', expand=True)
+
+    def _set_period_m1(self, tf):
+        """设置M1周期"""
+        self.chart_tv_m1.set(tf)
+        if hasattr(self, '_initialized') and self._initialized:
+            self._chart_m1()
+        periods = ['M1','M5','M6','M15','M30','H1','H4','D1']
+        for j, btn in enumerate(self.period_btns_m1):
+            if j < len(periods):
+                if periods[j] == tf:
+                    btn.config(bg=self.C['accent'], fg=self.C['bg'])
+                else:
+                    btn.config(bg=self.C['card'], fg=self.C['accent'])
+
+    def _set_period_h1(self, tf):
+        """设置H1周期"""
+        self.chart_tv_h1.set(tf)
+        if hasattr(self, '_initialized') and self._initialized:
+            self._chart_h1()
+        periods = ['M1','M5','M6','M15','M30','H1','H4','D1']
+        for j, btn in enumerate(self.period_btns_h1):
+            if j < len(periods):
+                if periods[j] == tf:
+                    btn.config(bg=self.C['accent'], fg=self.C['bg'])
+                else:
+                    btn.config(bg=self.C['card'], fg=self.C['accent'])
+
+    def _chart_m1(self):
+        """绘制M1图表"""
+        self.fig_m1.clear()
+        a = self.anz.analyze("XAUUSDc", self.chart_tv_m1.get())
+        if not a or a.get("rates") is None: return
+        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1)
+
+    def _chart_h1(self):
+        """绘制H1图表"""
+        self.fig_h1.clear()
+        a = self.anz.analyze("XAUUSDc", self.chart_tv_h1.get())
+        if not a or a.get("rates") is None: return
+        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1)
+
+    def _draw_chart(self, fig, a, title_prefix, chart_tv):
+        """通用图表绘制方法"""
+        from matplotlib import gridspec
+        r = a["rates"]; n = min(len(r), 80)
+        ti = np.arange(n); cl = r[-n:]["close"]; op = r[-n:]["open"]
+        hi = r[-n:]["high"]; lo = r[-n:]["low"]
+        m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
+        m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
+        m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
+        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 3, 3], hspace=0.08)
+        ax = fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
+        ax_atr = fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
+        ax_macd = fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
+        for i in range(n):
+            co = self.C["red"] if cl[i] >= op[i] else self.C["green"]
+            ax.plot([ti[i], ti[i]], [lo[i], hi[i]], color=co, linewidth=1.2)
+            ax.add_patch(Rectangle((ti[i]-0.4, min(cl[i], op[i])), 0.8, abs(cl[i]-op[i]), facecolor=co, edgecolor=co, linewidth=0.5))
+        o = n - len(m5); ax.plot(ti[o:], m5, "white", linewidth=1, label="MA5")
+        o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
+        o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
+        # 布林带
+        if a.get("bb") and len(r) > 20:
+            # 计算历史布林带
+            closes = r["close"]
+            bb_mid_hist = []
+            bb_std_hist = []
+            for i in range(19, len(closes)):
+                window = closes[i-19:i+1]
+                bb_mid_hist.append(float(np.mean(window)))
+                bb_std_hist.append(float(np.std(window)))
+            bb_upper_hist = [bb_mid_hist[i] + 2*bb_std_hist[i] for i in range(len(bb_mid_hist))]
+            bb_lower_hist = [bb_mid_hist[i] - 2*bb_std_hist[i] for i in range(len(bb_mid_hist))]
+            # 截取与n匹配的长度
+            start_idx = len(bb_upper_hist) - n
+            bb_upper_hist = bb_upper_hist[start_idx:]
+            bb_mid_hist = bb_mid_hist[start_idx:]
+            bb_lower_hist = bb_lower_hist[start_idx:]
+            ax.plot(ti, bb_upper_hist, "cyan", linewidth=0.8, alpha=0.7, label="BOLL上轨")
+            ax.plot(ti, bb_mid_hist, "cyan", linewidth=0.5, alpha=0.5, label="BOLL中轨")
+            ax.plot(ti, bb_lower_hist, "cyan", linewidth=0.8, alpha=0.7, label="BOLL下轨")
+            ax.fill_between(ti, bb_upper_hist, bb_lower_hist, alpha=0.1, color="cyan")
+        # 价格横线
+        if a.get("price"):
+            ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
+        if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
+        if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
+        ax.set_title(title_prefix + " " + chart_tv.get() + " 当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
+        ax.tick_params(colors=self.C["tx"])
+        for sp in ax.spines.values(): sp.set_color(self.C["bd"])
+        ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
+        ax.set_ylabel("价格", color=self.C["tx"])
+        ax.tick_params(axis='y', labelcolor=self.C["tx"])
+        # ATR
+        atr_val = a.get("atr", 0)
+        atr_hist = a.get("atr_hist", [])
+        if atr_hist and len(atr_hist) > 0:
+            disp_len = min(len(atr_hist), len(ti))
+            ax_atr.plot(ti[-disp_len:], atr_hist[-disp_len:], "purple", linewidth=1.5, label="ATR")
+            ax_atr.fill_between(ti[-disp_len:], 0, atr_hist[-disp_len:], alpha=0.3, color="purple")
+            ax_atr.axhline(y=atr_val, color="yellow", linewidth=1, linestyle="--", alpha=0.7)
+            ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
+            ax_atr.set_ylabel("ATR", color=self.C["tx"])
+            ax_atr.tick_params(axis='y', labelcolor=self.C["tx"])
+            ax_atr.tick_params(axis='x', labelcolor=self.C['tx'])
+            ax_atr.set_title("ATR 平均真实波幅", color=self.C["tx"], fontsize=9)
+        # MACD
+        macd_hist = a.get("macd_hist", [])
+        if macd_hist and len(macd_hist) > 0:
+            macd_line = macd_hist[-n:] if len(macd_hist) >= n else macd_hist
+            ti_macd = np.arange(len(macd_line))
+            signal_line = []
+            for i in range(len(macd_line)):
+                if i < 8:
+                    signal_line.append(sum(macd_line[:i+1])/(i+1))
+                else:
+                    signal_line.append(0.2*macd_line[i] + 0.8*signal_line[-1])
+            colors = [self.C["green"] if v >= 0 else self.C["red"] for v in macd_line]
+            ax_macd.bar(ti_macd, macd_line, color=colors, alpha=0.6, width=0.6)
+            ax_macd.plot(ti_macd, macd_line, "cyan", linewidth=1, label="MACD")
+            ax_macd.plot(ti_macd, signal_line, "orange", linewidth=1, label="Signal")
+            ax_macd.axhline(y=0, color=self.C["bd"], linewidth=0.5)
+            ax_macd.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
+            ax_macd.set_ylabel("MACD", color=self.C["tx"])
+            ax_macd.tick_params(axis='y', labelcolor=self.C["tx"])
+            ax_macd.tick_params(axis='x', labelcolor=self.C['tx'])
+            ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
+            ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
+        fig.subplots_adjust(hspace=0.08)
+        fig.canvas.draw()
+
+    def _build_right_panels(self):
+        """构建右侧可折叠面板"""
+        # 上方折叠区
+        self.top_collapser = tk.Frame(self.right_scrollable, bg=self.C["bg"])
+        self.top_collapser.pack(fill="x", pady=(0, 6))
+        self.top_header = tk.Frame(self.top_collapser, bg=self.C["card"])
+        self.top_header.pack(fill="x", padx=8, pady=4)
+        self.top_toggle = tk.Button(self.top_header, text="▼", font=("Consolas", 8), 
+                                     fg=self.C["accent"], bg=self.C["card"], relief="flat",
+                                     cursor="hand2", command=self._toggle_top)
+        self.top_toggle.pack(side="left")
+        tk.Label(self.top_header, text="实时数据", font=("Consolas", 9, "bold"),
+                 fg=self.C["tx"], bg=self.C["card"]).pack(side="left", padx=6)
+        self.top_content = tk.Frame(self.right_scrollable, bg=self.C["card"])
+        self.top_content.pack(fill="x", padx=8, pady=2)
+        self._panel_prices(self.top_content)
+        self._panel_signal(self.top_content)
+        self._panel_account(self.top_content)
+        # 下方折叠区
+        self.bottom_collapser = tk.Frame(self.right_scrollable, bg=self.C["bg"])
+        self.bottom_collapser.pack(fill="x", pady=(6, 0))
+        self.bottom_header = tk.Frame(self.bottom_collapser, bg=self.C["card"])
+        self.bottom_header.pack(fill="x", padx=8, pady=4)
+        self.bottom_toggle = tk.Button(self.bottom_header, text="▼", font=("Consolas", 8), 
+                                        fg=self.C["accent"], bg=self.C["card"], relief="flat",
+                                        cursor="hand2", command=self._toggle_bottom)
+        self.bottom_toggle.pack(side="left")
+        tk.Label(self.bottom_header, text="分析与交易", font=("Consolas", 9, "bold"),
+                 fg=self.C["tx"], bg=self.C["card"]).pack(side="left", padx=6)
+        self.bottom_content = tk.Frame(self.right_scrollable, bg=self.C["card"])
+        self.bottom_content.pack(fill="x", padx=8, pady=2)
+        self._panel_indicators(self.bottom_content)
+        self._panel_alerts(self.bottom_content)
+        self._panel_auto_trade(self.bottom_content)
+
+    def _toggle_top(self):
+        if self.top_content.winfo_ismapped():
+            self.top_content.pack_forget()
+            self.top_toggle.config(text="▶")
+        else:
+            self.top_content.pack(fill="x", padx=8, pady=2)
+            self.top_toggle.config(text="▼")
+
+    def _toggle_bottom(self):
+        if self.bottom_content.winfo_ismapped():
+            self.bottom_content.pack_forget()
+            self.bottom_toggle.config(text="▶")
+        else:
+            self.bottom_content.pack(fill="x", padx=8, pady=2)
+            self.bottom_toggle.config(text="▼")
 
     def _panel_indicators(self, parent):
         f = self._frame(parent, "技术指标")
