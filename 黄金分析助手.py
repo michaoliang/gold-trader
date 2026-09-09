@@ -347,10 +347,10 @@ class GoldAnalyzerApp:
                  fg=self.C["dim"], bg=self.C["bg"]).pack(side="left", padx=(20, 0))
         tk.Label(tf, textvariable=self.target_var, font=("Consolas", 9),
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(20, 0))
-        # 两列布局
+        # 三列布局
         main = tk.Frame(self.root, bg=self.C["bg"])
         main.pack(fill="both", expand=True, padx=16, pady=6)
-        # 左列：行情+信号+账户 (300px)
+        # 左列：行情+信号+账户 (350px)
         left = tk.Frame(main, bg=self.C["bg"])
         left.pack(side="left", fill="y", padx=(0, 10))
         left.pack_propagate(False)
@@ -358,14 +358,29 @@ class GoldAnalyzerApp:
         self._panel_prices(left)
         self._panel_signal(left)
         self._panel_account(left)
-        # 中列：K线图表+EA控制+价格预警+自动交易
+        # 中列：K线图表（固定宽度）
         mid = tk.Frame(main, bg=self.C["bg"])
-        mid.pack(side="left", fill="both", expand=True)
+        mid.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        mid.pack_propagate(False)
+        mid.configure(width=550)
         self._panel_chart(mid)
-        self._panel_ea(mid)
-        self._panel_alerts(mid)
-        self._panel_auto_trade(mid)
-        self._panel_indicators(mid)
+        # 右列：技术指标+EA控制+价格预警+自动交易（可滚动）
+        right = tk.Frame(main, bg=self.C["bg"])
+        right.pack(side="left", fill="both", expand=True)
+        self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
+        self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
+        self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
+        self.right_scrollable.bind("<Configure>", lambda e: self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all")))
+        self.right_canvas.create_window((0, 0), window=self.right_scrollable, anchor="nw")
+        self.right_canvas.configure(yscrollcommand=self.right_scroll.set)
+        self.right_canvas.pack(side="left", fill="both", expand=True)
+        self.right_scroll.pack(side="right", fill="y")
+        self.right_canvas.bind("<MouseWheel>", lambda e: self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+        self._panel_indicators(self.right_scrollable)
+        self._panel_ea(self.right_scrollable)
+        self._panel_alerts(self.right_scrollable)
+        self._panel_auto_trade(self.right_scrollable)
+
     def _panel_prices(self, parent):
         f = self._frame(parent, "实时行情")
         for sym, name in MT5Engine.SYMBOLS.items():
