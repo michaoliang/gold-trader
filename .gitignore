@@ -1,8 +1,14 @@
-﻿@__pycache__/
+﻿_Backup/
+__pycache__/
 *.pyc
 *.log
 debug.log
 err.txt
 out.txt
 *_b64*.txt
-
+*.bat
+.DS_Store
+*.ex5
+*.exp
+*.dll
+*.so
