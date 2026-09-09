@@ -555,7 +555,7 @@ class GoldAnalyzerApp:
             tk.Button(tf, text='▸'+opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
                       activebackground=self.C['accent'], relief='flat', cursor='hand2',
                       command=lambda o=opt: self.chart_tv.set(o) or self.tv.set(o) or self._chart() or self._signal()).pack(side='left', padx=4)
-        self.fig = Figure(figsize=(10, 8), facecolor=self.C['card'])
+        self.fig = Figure(figsize=(10, 5), facecolor=self.C['card'])
         self.canvas = FigureCanvasTkAgg(self.fig, master=f)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
 
@@ -1035,14 +1035,14 @@ class GoldAnalyzerApp:
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
         # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[10, 2.5, 2.5], hspace=1)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[18, 2, 2], hspace=1)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
         for i in range(n):
             co = self.C["red"] if cl[i] >= op[i] else self.C["green"]
-            ax.plot([ti[i], ti[i]], [lo[i], hi[i]], color=co, linewidth=1.2)
-            ax.add_patch(Rectangle((ti[i]-0.4, min(cl[i], op[i])), 0.8, abs(cl[i]-op[i]), facecolor=co, edgecolor=co, linewidth=0.5))
+            ax.plot([ti[i], ti[i]], [lo[i], hi[i]], color=co, linewidth=0.8)
+            ax.add_patch(Rectangle((ti[i]-0.3, min(cl[i], op[i])), 0.6, abs(cl[i]-op[i]), facecolor=co, edgecolor=co))
         o = n - len(m5); ax.plot(ti[o:], m5, "white", linewidth=1, label="MA5")
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
