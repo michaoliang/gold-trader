@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.034 - 完整版
+黄金分析助手 v3.035 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -304,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.034")
+        self.root.title("黄金分析助手 v3.035")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -370,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.034 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.035 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -996,10 +996,12 @@ class GoldAnalyzerApp:
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
-        # 创建三面板：上方面板K线+布林，中间ATR，下方MACD
-        ax = self.fig.add_subplot(311); ax.set_facecolor(self.C["card"])
-        ax_atr = self.fig.add_subplot(312); ax_atr.set_facecolor(self.C["card"])
-        ax_macd = self.fig.add_subplot(313); ax_macd.set_facecolor(self.C["card"])
+        # 创建三面板：K线图占60%，ATR和MACD各占20%
+        from matplotlib import gridspec
+        gs = gridspec.GridSpec(3, 1, height_ratios=[6, 2, 2], hspace=0.1)
+        ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
+        ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
+        ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
         for i in range(n):
             co = self.C["red"] if cl[i] >= op[i] else self.C["green"]
             ax.plot([ti[i], ti[i]], [lo[i], hi[i]], color=co, linewidth=0.8)
