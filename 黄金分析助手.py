@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.026 - 完整版
+黄金分析助手 v3.028 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -285,7 +285,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.026")
+        self.root.title("黄金分析助手 v3.028")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -351,7 +351,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.026 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.028 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -442,57 +442,69 @@ class GoldAnalyzerApp:
 
     def _panel_account(self, parent):
         f = self._frame(parent, '账户信息')
-        # 账户概览卡片
-        card = tk.Frame(f, bg=self.C['card2'], relief='flat')
-        card.pack(fill='x', padx=8, pady=6)
         
-        # 顶部：余额和权益（大字显示）
-        top_f = tk.Frame(card, bg=self.C['card2'])
-        top_f.pack(fill='x', pady=(0, 8))
+        # 账户概览 - 横向卡片布局
+        overview = tk.Frame(f, bg=self.C['card'])
+        overview.pack(fill='x', padx=8, pady=6)
+        
+        # 四宫格显示主要指标
+        # 第一行：余额 | 权益
+        row1 = tk.Frame(overview, bg=self.C['card'])
+        row1.pack(fill='x', pady=2)
         
         # 余额
-        bal_f = tk.Frame(top_f, bg=self.C['card2'])
-        bal_f.pack(side='left', fill='y')
-        tk.Label(bal_f, text='● 账户余额', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack()
+        bal_card = tk.Frame(row1, bg=self.C['card2'], relief='solid', bd=1)
+        bal_card.pack(side='left', fill='both', expand=True, padx=3)
+        tk.Label(bal_card, text='账户余额', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=(4,0))
         self.avars['bal'] = tk.StringVar(value='--')
-        tk.Label(bal_f, textvariable=self.avars['bal'], font=('Consolas', 14, 'bold'), fg=self.C['accent'], bg=self.C['card2']).pack()
+        tk.Label(bal_card, textvariable=self.avars['bal'], font=('Consolas', 13, 'bold'), fg=self.C['accent'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=2)
         
         # 权益
-        eq_f = tk.Frame(top_f, bg=self.C['card2'])
-        eq_f.pack(side='left', fill='y', padx=(20, 0))
-        tk.Label(eq_f, text='● 账户权益', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack()
+        eq_card = tk.Frame(row1, bg=self.C['card2'], relief='solid', bd=1)
+        eq_card.pack(side='left', fill='both', expand=True, padx=3)
+        tk.Label(eq_card, text='账户权益', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=(4,0))
         self.avars['eq'] = tk.StringVar(value='--')
-        tk.Label(eq_f, textvariable=self.avars['eq'], font=('Consolas', 14, 'bold'), fg=self.C['glow'], bg=self.C['card2']).pack()
+        tk.Label(eq_card, textvariable=self.avars['eq'], font=('Consolas', 13, 'bold'), fg=self.C['glow'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=2)
         
-        # 中间：保证金和可用（并排）
-        mid_f = tk.Frame(card, bg=self.C['card2'])
-        mid_f.pack(fill='x', pady=(0, 8))
+        # 第二行：保证金 | 可用 | 盈亏
+        row2 = tk.Frame(overview, bg=self.C['card'])
+        row2.pack(fill='x', pady=4)
         
         # 保证金
-        mg_f = tk.Frame(mid_f, bg=self.C['card2'])
-        mg_f.pack(side='left', fill='y')
-        tk.Label(mg_f, text='○ 保证金占用', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack()
+        mg_card = tk.Frame(row2, bg=self.C['card2'], relief='solid', bd=1)
+        mg_card.pack(side='left', fill='both', expand=True, padx=3)
+        tk.Label(mg_card, text='保证金占用', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=(4,0))
         self.avars['mg'] = tk.StringVar(value='--')
-        tk.Label(mg_f, textvariable=self.avars['mg'], font=('Consolas', 11, 'bold'), fg=self.C['yellow'], bg=self.C['card2']).pack()
+        tk.Label(mg_card, textvariable=self.avars['mg'], font=('Consolas', 11, 'bold'), fg=self.C['yellow'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=2)
         
         # 可用资金
-        free_f = tk.Frame(mid_f, bg=self.C['card2'])
-        free_f.pack(side='left', fill='y', padx=(20, 0))
-        tk.Label(free_f, text='○ 可用资金', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack()
+        free_card = tk.Frame(row2, bg=self.C['card2'], relief='solid', bd=1)
+        free_card.pack(side='left', fill='both', expand=True, padx=3)
+        tk.Label(free_card, text='可用资金', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=(4,0))
         self.avars['free'] = tk.StringVar(value='--')
-        tk.Label(free_f, textvariable=self.avars['free'], font=('Consolas', 11, 'bold'), fg=self.C['green'], bg=self.C['card2']).pack()
+        tk.Label(free_card, textvariable=self.avars['free'], font=('Consolas', 11, 'bold'), fg=self.C['green'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=2)
         
-        # 底部：盈亏（大号显示）
-        prof_f = tk.Frame(card, bg=self.C['card2'])
-        prof_f.pack(fill='x')
-        tk.Label(prof_f, text='● 当日盈亏', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack(side='left')
+        # 盈亏
+        prof_card = tk.Frame(row2, bg=self.C['card2'], relief='solid', bd=1)
+        prof_card.pack(side='left', fill='both', expand=True, padx=3)
+        tk.Label(prof_card, text='当日盈亏', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card2']).pack(anchor='w', padx=6, pady=(4,0))
         self.avars['prof'] = tk.StringVar(value='--')
-        self.prof_lbl = tk.Label(prof_f, textvariable=self.avars['prof'], font=('Consolas', 13, 'bold'), bg=self.C['card2'])
-        self.prof_lbl.pack(side='left', padx=(10, 0))
+        self.prof_lbl = tk.Label(prof_card, textvariable=self.avars['prof'], font=('Consolas', 11, 'bold'), bg=self.C['card2'])
+        self.prof_lbl.pack(anchor='w', padx=6, pady=2)
         
-        # 持仓信息
-        self.pt = tk.Text(f, height=3, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'], relief='flat', state='disabled')
-        self.pt.pack(fill='x', padx=8, pady=(4, 6))
+        # 分割线
+        tk.Frame(f, bg=self.C['bd'], height=1).pack(fill='x', pady=4)
+        
+        # 持仓信息 - 自适应高度（无滚动条）
+        pos_header = tk.Frame(f, bg=self.C['card'])
+        pos_header.pack(fill='x', padx=8)
+        tk.Label(pos_header, text='当前持仓', font=('Consolas', 9, 'bold'), fg=self.C['accent'], bg=self.C['card']).pack(side='left')
+        tk.Label(pos_header, text='•••', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card']).pack(side='right')
+        
+        # 持仓文本框 - 根据内容自动调整高度
+        self.pt = tk.Text(f, height=2, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'], 
+                         relief='flat', state='disabled', wrap='word')
+        self.pt.pack(fill='x', padx=8, pady=(2, 6))
 
     def _panel_chart(self, parent):
         f = self._frame(parent, 'K线图表')
