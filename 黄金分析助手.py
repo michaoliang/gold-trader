@@ -412,7 +412,7 @@ class GoldAnalyzerApp:
             tk.Button(tf, text=opt, font=('Consolas', 8, 'bold'), fg=self.C['accent'], bg=self.C['card'], highlightthickness=1, highlightcolor=self.C['bd'],
                       activebackground=self.C['accent'], relief='flat', cursor='hand2',
                       command=lambda o=opt: self.tv.set(o) or self._signal() or self._chart()).pack(side='left', padx=2)
-        self.sd = tk.Text(f, height=8, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'],
+        self.sd = tk.Text(f, height=1, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'],
                           insertbackground=self.C['tx'], relief='flat', state='disabled')
         self.sd.pack(fill='x', padx=4, pady=(4, 0))
         qf = tk.Frame(f, bg=self.C['card']); qf.pack(fill='x', padx=4, pady=(4,0))
@@ -848,6 +848,9 @@ class GoldAnalyzerApp:
         self.sd.delete("1.0", "end")
         self.sd.insert("1.0", d)
         self.sd.config(state="disabled")
+        # 自适应高度
+        lines_count = d.count('\n') + 1
+        self.sd.config(height=min(max(lines_count, 3), 15))
 
     def _account(self):
         try:
