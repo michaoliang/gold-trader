@@ -1059,11 +1059,11 @@ class GoldAnalyzerApp:
             self.countdown_annot = ax.annotate(f"倒计时: {countdown_str}", xy=(1, 0.95), xycoords="axes fraction", fontsize=10,
                     ha="right", va="top", color=self.C["yellow"], fontweight="bold")
         ax.set_title("XAUUSDc " + self.tv.get() + "  当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
-        ax.tick_params(colors=self.C["dim"])
+        ax.tick_params(colors=self.C["tx"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
         ax.set_ylabel("价格", color=self.C["tx"])
-        ax.tick_params(axis='y', labelcolor=self.C["dim"])
+        ax.tick_params(axis='y', labelcolor=self.C["tx"])
         
         # 绘制ATR波动率
         atr_val = a.get("atr", 0)
@@ -1076,7 +1076,7 @@ class GoldAnalyzerApp:
             ax_atr.axhline(y=atr_val, color="yellow", linewidth=1, linestyle="--", alpha=0.7, label=f"当前={atr_val:.2f}")
             ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_atr.set_ylabel("ATR", color=self.C["tx"])
-            ax_atr.tick_params(axis='y', labelcolor=self.C["dim"])
+            ax_atr.tick_params(axis='y', labelcolor=self.C["tx"])
             ax_atr.set_title("ATR 平均真实波幅", color=self.C["tx"], fontsize=9)
         
         # 绘制MACD
@@ -1101,7 +1101,7 @@ class GoldAnalyzerApp:
             ax_macd.axhline(y=0, color=self.C["bd"], linewidth=0.5)
             ax_macd.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_macd.set_ylabel("MACD", color=self.C["tx"])
-            ax_macd.tick_params(axis='y', labelcolor=self.C["dim"])
+            ax_macd.tick_params(axis='y', labelcolor=self.C["tx"])
             ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
         
