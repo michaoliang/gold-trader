@@ -1,0 +1,11 @@
+09:55:10 ============================================================
+09:55:10 SMART TRADING BOT v1.0 STARTED
+09:55:10 Strategy: RSI + MA + MACD + Bollinger Multi-Timeframe
+09:55:10 Target: $3000 | Initial: $1560
+09:55:10 Base Lot: 0.03 | Max Positions: 3
+09:55:10 ============================================================
+09:55:10 ERROR: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+09:55:20 ERROR: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+09:55:30 ERROR: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+09:55:40 ERROR: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+09:55:50 ERROR: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
