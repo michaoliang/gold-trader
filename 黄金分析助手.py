@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.060 - 完整版
+黄金分析助手 v3.059 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -319,7 +319,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.060")
+        self.root.title("黄金分析助手 v3.059")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -390,7 +390,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.060 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.059 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -679,12 +679,7 @@ class GoldAnalyzerApp:
             ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
-        period = chart_tv.get()
-        # 避免显示重复的周期名称 (如 M1 M1)
-        if title_prefix == period:
-            ax.set_title(period + " 当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
-        else:
-            ax.set_title(title_prefix + " " + period + " 当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
+        ax.set_title(title_prefix + " " + chart_tv.get() + " 当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
         ax.tick_params(colors=self.C["tx"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
