@@ -743,12 +743,27 @@ class GoldAnalyzerApp:
         cm = {"green": self.C["green"], "red": self.C["red"], "orange": self.C["yellow"], "lightgreen": self.C["green"], "gray": self.C["dim"]}
         if self.sl_label: self.sl_label.config(text=txt, fg=cm.get(col, self.C["yellow"]))
         else: self.sl.set(txt)
-        d = f"Trend: {a['trend']}\nScore: Buy {a['bs']} | Sell {a['ss']}\n"
-        if a["sup"]: d += f"Support: ${a['sup']:.1f}  Resistance: ${a['res']:.1f}\n"
-        d += "\n"
+        # 简体中文 + 科技感样式
+        trend_cn = {"上涨": "📈 上升趋势", "下跌": "📉 下降趋势", "盘整": "➡️ 横盘整理"}.get(a["trend"], a["trend"])
+        d = "┌─ 趋势分析 ─────────────┐
+"
+        d += "| " + trend_cn + " " * (20 - len(trend_cn)) + " |
+"
+        d += "| 多头得分: {:<3} |  空头得分: {:<3}   |
+".format(a["bs"], a["ss"])
+        d += "└───────────────────┘
+
+"
+        if a["sup"]: d += "[支撑位] ${:.1f}      [阻力位] ${:.1f}
+
+".format(a["sup"], a["res"])
+        d += "┌─ 技术指标 ─────────────┐
+"
         for n, l in a["signals"]:
-            lc = self.C["green"] if l in ("买入", "偏多", "强势") else (self.C["red"] if l in ("卖出", "偏空", "强势") else self.C["yellow"])
-            d += f"* {n}: {l}\n"
+            icon = "●" if l in ("买入", "偏多") else ("●" if l in ("卖出", "偏空") else "○")
+            d += "| {} {:<16} {}  |
+".format(icon, n, l)
+        d += "└───────────────────┘"
         self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
         # === 技术指标显示（科技感版）===
         # MA系统
