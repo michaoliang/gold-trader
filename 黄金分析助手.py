@@ -324,6 +324,7 @@ class GoldAnalyzerApp:
         self.alert_pct = tk.DoubleVar(value=ALERT_PCT)
         self.quick_lot_var = tk.DoubleVar(value=0.01)
         self.conn_var = tk.StringVar(value="连接中...")
+        self.alert_thresh_var = tk.StringVar(value="1.0%")  # 实时阈值显示
 
     def _frame(self, parent, title):
         f = tk.Frame(parent, bg=self.C["card"], relief="solid", bd=1)
@@ -659,8 +660,13 @@ class GoldAnalyzerApp:
         tk.Label(af, text="波动阈值 %:", font=("Consolas", 9), fg=self.C["dim"], bg=self.C["card"]).pack(side="left", padx=(0,4))
         tk.Spinbox(af, from_=0.5, to=10, increment=0.5, textvariable=self.alert_pct, width=5,
                    font=("Consolas", 9), bg=self.C["bg"], fg=self.C["tx"], relief="flat").pack(side="left", padx=(0,8))
+        self.alert_pct.trace_add("write", lambda *args: self.alert_thresh_var.set("{:.1f}%".format(self.alert_pct.get())))
         tk.Button(af, text="添加预警", command=self._add_alert,
                   bg=self.C["accent"], fg=self.C["bg"], font=("Consolas", 9), cursor="hand2", relief="flat", width=8).pack(side="left")
+        # 实时阈值显示
+        self.alert_thresh_lbl = tk.Label(af, textvariable=self.alert_thresh_var, font=("Consolas", 9, "bold"),
+                                         fg=self.C["yellow"], bg=self.C["card"])
+        self.alert_thresh_lbl.pack(side="left", padx=(10, 0))
         nf = tk.Frame(f, bg=self.C["card"]); nf.pack(fill="x", padx=8, pady=(4,0))
         self.notify_popup_var = tk.BooleanVar(value=True)
         self.notify_sound_var = tk.BooleanVar(value=True)
@@ -840,18 +846,8 @@ class GoldAnalyzerApp:
         o = n - len(m10); ax.plot(ti[o:], m10, "orange", linewidth=1, label="MA10")
         o = n - len(m20); ax.plot(ti[o:], m20, "blue", linewidth=1, label="MA20")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
-        # 添加价格横线
-        if a.get("price"):
-            if self.price_line:
-                self.price_line.set_ydata([a["price"], a["price"]])
-            else:
-                self.price_line = ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
-        # 添加倒计时显示
-        countdown_str = self.countdown_var.get() if hasattr(self, "countdown_var") else "--:--"
-        ax.annotate(f"倒计时: {countdown_str}", xy=(1, 0.95), xycoords="axes fraction", fontsize=10,
-                    ha="right", va="top", color=self.C["yellow"], fontweight="bold")
-        ax.set_title("XAUUSDc " + self.tv.get() + "  当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
+        ax.set_title(f"XAUUSDc {self.tv.get()}  当前: {a['price']:.2f}", color=self.C["tx"], fontsize=10)
         ax.tick_params(colors=self.C["dim"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
