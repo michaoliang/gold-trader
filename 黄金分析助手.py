@@ -152,30 +152,30 @@ class MT5Engine:
         atr = self.atr(h,l,c)
         res, sup = self.levels(r)
         sig, trend = [], ""
-        if ma[5]>ma[10]>ma[20]: trend,sig="Strong Up",[("MA Bullish","Strong")]
-        elif ma[5]<ma[10]<ma[20]: trend,sig="Strong Down",[("MA Bearish","Strong")]
-        elif ma[5]>ma[10]: trend,sig="Bullish",[("MA Up","Neutral")]
-        elif ma[5]<ma[10]: trend,sig="Bearish",[("MA Down","Neutral")]
-        if rsi>70: sig.append((f"RSI={rsi:.0f} Overbought","Sell"))
-        elif rsi<30: sig.append((f"RSI={rsi:.0f} Oversold","Buy"))
-        elif rsi>60: sig.append((f"RSI={rsi:.0f}","Bearish"))
-        elif rsi<40: sig.append((f"RSI={rsi:.0f}","Bullish"))
-        else: sig.append((f"RSI={rsi:.0f}","Neutral"))
-        if m>0 and mh>0: sig.append(("MACD Cross Up","Buy"))
-        elif m<0 and mh<0: sig.append(("MACD Cross Down","Sell"))
-        if bb and t.bid<bb[2]: sig.append(("Below BB Lower","Buy"))
-        elif bb and t.bid>bb[0]: sig.append(("Above BB Upper","Sell"))
-        if sup and t.bid-sup<2: sig.append((f"Support ${sup:.1f}","Watch"))
-        if res and res-t.bid<2: sig.append((f"Resistance ${res:.1f}","Watch"))
+        if ma[5]>ma[10]>ma[20]: trend,sig="强势上涨",[("MA Bullish","Strong")]
+        elif ma[5]<ma[10]<ma[20]: trend,sig="强势下跌",[("MA Bearish","Strong")]
+        elif ma[5]>ma[10]: trend,sig="偏多",[("MA Up","中性")]
+        elif ma[5]<ma[10]: trend,sig="偏空",[("MA Down","中性")]
+        if rsi>70: sig.append((f"RSI={rsi:.0f} 超买区域","卖出"))
+        elif rsi<30: sig.append((f"RSI={rsi:.0f} 超卖区域","买入"))
+        elif rsi>60: sig.append((f"RSI={rsi:.0f}","偏空"))
+        elif rsi<40: sig.append((f"RSI={rsi:.0f}","偏多"))
+        else: sig.append((f"RSI={rsi:.0f}","中性"))
+        if m>0 and mh>0: sig.append(("MACD金叉","买入"))
+        elif m<0 and mh<0: sig.append(("MACD死叉","卖出"))
+        if bb and t.bid<bb[2]: sig.append(("触布林下轨","买入"))
+        elif bb and t.bid>bb[0]: sig.append(("触布林上轨","卖出"))
+        if sup and t.bid-sup<2: sig.append((f"支撑 ${sup:.1f}","关注"))
+        if res and res-t.bid<2: sig.append((f"阻力 ${res:.1f}","关注"))
         ap = atr/t.bid*100 if t.bid>0 else 0
-        vl = "High" if ap>0.5 else ("Medium" if ap>0.2 else "Low")
-        bs = sum(1 for x in sig if x[1] in ("Buy","Bullish","Strong"))
-        ss = sum(1 for x in sig if x[1] in ("Sell","Bearish","Strong"))
-        if bs>ss+2: ov=("STRONG BUY","green")
-        elif bs>ss: ov=("BULLISH","lightgreen")
-        elif ss>bs+2: ov=("STRONG SELL","red")
-        elif ss>bs: ov=("BEARISH","orange")
-        else: ov=("NEUTRAL","gray")
+        vl = "高" if ap>0.5 else ("中" if ap>0.2 else "低")
+        bs = sum(1 for x in sig if x[1] in ("买入","偏多","Strong"))
+        ss = sum(1 for x in sig if x[1] in ("卖出","偏空","Strong"))
+        if bs>ss+2: ov=("强力买入","green")
+        elif bs>ss: ov=("偏多","lightgreen")
+        elif ss>bs+2: ov=("强力卖出","red")
+        elif ss>bs: ov=("偏空","orange")
+        else: ov=("观望","gray")
         return {'sym':sym,'name':self.SYMBOLS.get(sym,sym),'price':t.bid,'ask':t.ask,
                 'spread':t.ask-t.bid,'trend':trend,'ma':ma,'rsi':rsi,'macd':m,
                 'bb':bb,'atr':atr,'atr_pct':ap,'vol':vl,'signals':sig,'overall':ov,
@@ -289,10 +289,10 @@ class GoldAnalyzerApp:
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
         self.notifier = ToastNotifier() if HAS_TOAST else None
-        self.C = {'bg': '#0d1117', 'card': '#161b22', 'bd': '#30363d',
-                  'tx': '#c9d1d9', 'dim': '#8b949e', 'accent': '#58a6ff',
-                  'green': '#3fb950', 'red': '#f85149', 'yellow': '#d29922',
-                  'highlight': '#1f6feb', 'glow': '#39d353'}
+        self.C = {'bg': '#060c18', 'card': '#0d1a2d', 'bd': '#1a3a5c',
+                  'tx': '#e0f0ff', 'dim': '#5a8aaa', 'accent': '#00e5ff',
+                  'green': '#00ff88', 'red': '#ff3366', 'yellow': '#ffaa00',
+                  'highlight': '#00b4d8', 'glow': '#00ff88'}
         self.anz = MT5Engine()
         self.anz.connect()
         self.alert_system = AlertSystem()
@@ -325,9 +325,9 @@ class GoldAnalyzerApp:
 
     def _frame(self, parent, title):
         f = tk.Frame(parent, bg=self.C["card"], relief="solid", bd=1)
-        f.pack(fill="x", padx=6, pady=4)
-        tk.Label(f, text="● " + title, font=("Consolas", 9, "bold"),
-                 fg=self.C["accent"], bg=self.C["card"]).pack(fill="x", padx=8, pady=(4, 2))
+        f.pack(fill="x", padx=10, pady=6)
+        tk.Label(f, text="▸ " + title, font=("Consolas", 9, "bold"),
+                 fg=self.C["accent"], bg=self.C["card"]).pack(fill="x", padx=12, pady=(6, 3))
         return f
 
     def _build_ui(self):
@@ -337,7 +337,7 @@ class GoldAnalyzerApp:
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
-        tf.pack(fill="x", padx=12, pady=(8, 4))
+        tf.pack(fill="x", padx=20, pady=(10, 5))
         tk.Label(tf, text="HJ ANALYZER  v3.0", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8),
@@ -348,14 +348,16 @@ class GoldAnalyzerApp:
         tk.Label(tf, textvariable=self.target_var, font=("Consolas", 9),
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(20, 0))
         main = tk.Frame(self.root, bg=self.C["bg"])
-        main.pack(fill="both", expand=True, padx=12, pady=4)
+        main.pack(fill="both", expand=True, padx=16, pady=6)
         left = tk.Frame(main, bg=self.C["bg"])
-        left.pack(side="left", fill="y", padx=(0, 6))
+        left.pack(side="left", fill="y", padx=(0, 10), anchor="nw")
+        left.pack_propagate(False)
+        left.configure(width=360)
         self._panel_prices(left)
         self._panel_signal(left)
         self._panel_account(left)
         right = tk.Frame(main, bg=self.C["bg"])
-        right.pack(side="left", fill="both", expand=True, padx=(6, 0))
+        right.pack(side="left", fill="both", expand=True, padx=(10, 16))
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
         self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
