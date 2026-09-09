@@ -439,12 +439,25 @@ class GoldAnalyzerApp:
 
     def _panel_indicators(self, parent):
         f = self._frame(parent, '技术指标')
-        grid = tk.Frame(f, bg=self.C['card']); grid.pack(fill='x', padx=6)
-        items = [('MA5',self.ivars['ma5']),('MA10',self.ivars['ma10']),('MA20',self.ivars['ma20']),('MA50',self.ivars['ma50']),
-                 ('RSI',self.ivars['rsi']),('MACD',self.ivars['macd']),('布林上',self.ivars['bbu']),('布林下',self.ivars['bbl']),('ATR',self.ivars['atr']),('波动',self.vv)]
-        for i, (lbl, var) in enumerate(items):
-            tk.Label(grid, text=lbl, font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).grid(row=i//5, column=i%5, sticky='w', padx=(0,4))
-            tk.Label(grid, textvariable=var, font=('Consolas', 9), fg=self.C['accent'], bg=self.C['card']).grid(row=i//5, column=i%5, sticky='e')
+        # 科技感布局：双列显示，带状态标签
+        cf = tk.Frame(f, bg=self.C['card'])
+        cf.pack(fill='x', padx=10, pady=6)
+        # 左列
+        lf = tk.Frame(cf, bg=self.C['card'])
+        lf.pack(side='left', fill='x', expand=True)
+        for lbl, var in [('MA5',self.ivars['ma5']),('MA10',self.ivars['ma10']),('MA20',self.ivars['ma20']),('MA50',self.ivars['ma50']),('RSI',self.ivars['rsi'])]:
+            rf = tk.Frame(lf, bg=self.C['card'])
+            rf.pack(fill='x', pady=2)
+            tk.Label(rf, text=lbl, font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], width=6, anchor='w').pack(side='left')
+            tk.Label(rf, textvariable=var, font=('Consolas', 9, 'bold'), fg=self.C['accent'], bg=self.C['card'], anchor='e').pack(side='right', expand=True)
+        # 右列
+        rf2 = tk.Frame(cf, bg=self.C['card'])
+        rf2.pack(side='left', fill='x', expand=True, padx=(10, 0))
+        for lbl, var in [('MACD',self.ivars['macd']),('布林上',self.ivars['bbu']),('布林下',self.ivars['bbl']),('ATR',self.ivars['atr']),('波动',self.vv)]:
+            rf = tk.Frame(rf2, bg=self.C['card'])
+            rf.pack(fill='x', pady=2)
+            tk.Label(rf, text=lbl, font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], width=6, anchor='w').pack(side='left')
+            tk.Label(rf, textvariable=var, font=('Consolas', 9, 'bold'), fg=self.C['green'], bg=self.C['card'], anchor='e').pack(side='right', expand=True)
 
 
     def _refresh(self):
@@ -633,17 +646,52 @@ class GoldAnalyzerApp:
             lc = self.C["green"] if l in ("买入", "偏多", "强势") else (self.C["red"] if l in ("卖出", "偏空", "强势") else self.C["yellow"])
             d += f"* {n}: {l}\n"
         self.sd.config(state="normal"); self.sd.delete("1.0", "end"); self.sd.insert("1.0", d); self.sd.config(state="disabled")
-        self.ivars["ma5"].set(f"{a['ma'][5]:.2f}")
-        self.ivars["ma10"].set(f"{a['ma'][10]:.2f}")
-        self.ivars["ma20"].set(f"{a['ma'][20]:.2f}")
-        self.ivars["ma50"].set(f"{a['ma'][50]:.2f}")
-        self.ivars["rsi"].set(f"{a['rsi']:.1f}")
-        self.ivars["macd"].set(f"{a['macd']:.2f}")
+        # === 技术指标显示（科技感版）===
+        # MA系统
+        ma5, ma10, ma20, ma50 = a['ma'][5], a['ma'][10], a['ma'][20], a['ma'][50]
+        ma5_str = f"{ma5:.2f}"
+        ma10_str = f"{ma10:.2f}"
+        ma20_str = f"{ma20:.2f}"
+        ma50_str = f"{ma50:.2f}"
+        # 添加MA状态
+        if ma5 > ma10 > ma20:
+            ma5_str += " 多头"
+        elif ma5 < ma10 < ma20:
+            ma5_str += " 空头"
+        self.ivars['ma5'].set(ma5_str)
+        self.ivars['ma10'].set(ma10_str)
+        self.ivars['ma20'].set(ma20_str)
+        self.ivars['ma50'].set(ma50_str)
+        
+        # RSI - 超买超卖
+        rsi = a['rsi']
+        rsi_str = f"{rsi:.1f}"
+        if rsi > 70: rsi_str += " 🔴超买"
+        elif rsi < 30: rsi_str += " 🟢超卖"
+        else: rsi_str += " ⚪中性"
+        self.ivars['rsi'].set(rsi_str)
+        
+        # MACD - 金叉死叉
+        macd_val = a['macd']
+        macd_str = f"{macd_val:.2f}"
+        if macd_val > 0: macd_str += " ↑金叉"
+        elif macd_val < 0: macd_str += " ↓死叉"
+        self.ivars['macd'].set(macd_str)
+        
+        # 布林带
         if a["bb"]:
-            self.ivars["bbu"].set(f"{a['bb'][0]:.2f}")
-            self.ivars["bbl"].set(f"{a['bb'][2]:.2f}")
-        self.ivars["atr"].set(f"{a['atr']:.2f}")
-        self.vv.set(f"{a['atr'] / a['price'] * 100:.2f}% ({a['vol']})")
+            self.ivars['bbu'].set(f"{a['bb'][0]:.2f}")
+            self.ivars['bbl'].set(f"{a['bb'][2]:.2f}")
+        
+        # ATR波动率
+        atr = a['atr']
+        vol_pct = atr / a['price'] * 100 if a['price'] > 0 else 0
+        vol_str = f"{vol_pct:.2f}%"
+        if a['vol'] == '高': vol_str += " 🔥高波"
+        elif a['vol'] == '中': vol_str += " 📊中波"
+        else: vol_str += " ❄️低波"
+        self.ivars['atr'].set(f"{atr:.2f}")
+        self.vv.set(vol_str)
 
     def _account(self):
         try:
