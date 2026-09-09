@@ -429,7 +429,7 @@ class GoldAnalyzerApp:
         self.sd = tk.Text(f, height=1, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'],
                           insertbackground=self.C['tx'], relief='flat', state='disabled')
         self.sd.pack(fill='x', padx=8, pady=(4, 0))
-        qf = tk.Frame(f, bg=self.C['card']); qf.pack(fill='x', padx=8, pady=(4,0))
+        qf = tk.Frame(f, bg=self.C['card']); qf.pack(fill='x', padx=8, pady=(4, 6))
         tk.Label(qf, text='快捷交易:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left')
         self.quick_lot_var = tk.DoubleVar(value=0.01)
         tk.Spinbox(qf, from_=0.01, to=2.0, increment=0.01, textvariable=self.quick_lot_var, width=6,
@@ -447,7 +447,7 @@ class GoldAnalyzerApp:
             self.avars[k] = tk.StringVar(value='--')
             tk.Label(grid, textvariable=self.avars[k], font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card']).grid(row=i//3, column=i%3, sticky='e')
         self.pt = tk.Text(f, height=3, font=('Consolas', 9), fg=self.C['tx'], bg=self.C['card'], relief='flat', state='disabled')
-        self.pt.pack(fill='x', padx=4, pady=(0, 4))
+        self.pt.pack(fill='x', padx=6, pady=(0, 6))
 
     def _panel_chart(self, parent):
         f = self._frame(parent, 'K线图表')
@@ -743,7 +743,7 @@ class GoldAnalyzerApp:
         tk.Button(bf, text='编译部署EA', command=self._deploy_ea,
                   bg=self.C['accent'], fg=self.C['bg'], font=('Consolas', 9, 'bold'),
                   cursor='hand2', relief='flat', width=12).pack(side='left', padx=4)
-        inf = tk.Frame(f, bg=self.C['card']); inf.pack(fill='x', padx=8, pady=(4,0))
+        inf = tk.Frame(f, bg=self.C['card']); inf.pack(fill='x', padx=8, pady=(4, 6))
         tk.Label(inf, text='INFO 1.选择MT5路径 -> 2.编译部署 -> 3.打开MT5 -> 4.拖EA到图表 -> 5.勾选允许算法交易',
                  font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], wraplength=500).pack(anchor='w')
         self._check_ea_status()
