@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.023 - 完整版
+黄金分析助手 v3.024 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -284,7 +284,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.023")
+        self.root.title("黄金分析助手 v3.024")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -350,7 +350,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.023 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.024 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -468,7 +468,6 @@ class GoldAnalyzerApp:
         bbf = tk.LabelFrame(f, text="◎ BOLL 布林带 [20,2]", font=("Consolas", 9, "bold"),
                            fg=self.C["accent"], bg=self.C["card"], labelanchor="n", padx=8, pady=6,
                            relief="flat", bd=0)
-        bbf.pack_propagate(False)
         bbf.pack(fill="x", padx=10, pady=6)
         
         # 布林带三轨显示
@@ -799,7 +798,7 @@ class GoldAnalyzerApp:
         self.ivars['macd'].set(macd_str)
         
         # 布林带
-        if a.get("bb"):
+        if a.get("bb") and isinstance(a["bb"], tuple) and len(a["bb"]) == 3:
             self.bb_upper_var.set(f"{a['bb'][0]:.2f}")
             self.bb_mid_var.set(f"{a['bb'][1]:.2f}")
             self.bb_lower_var.set(f"{a['bb'][2]:.2f}")
