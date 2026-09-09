@@ -842,6 +842,11 @@ class GoldAnalyzerApp:
             self.vol_state_var.set("中波")
         self.atr_val_var.set(f"{atr:.2f}")
         self.vv.set(vol_str)
+        # 更新信号分析文本框
+        self.sd.config(state="normal")
+        self.sd.delete("1.0", "end")
+        self.sd.insert("1.0", d)
+        self.sd.config(state="disabled")
 
     def _account(self):
         try:
@@ -909,6 +914,7 @@ class GoldAnalyzerApp:
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
         self.fig.tight_layout(); self.canvas.draw()
     def _update_countdown(self):
+        import sys; print(f'[countdown] tv={self.tv.get()}', file=sys.stderr)
         """更新周期倒计时"""
         try:
             tf = self.tv.get()
