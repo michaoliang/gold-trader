@@ -1077,6 +1077,7 @@ class GoldAnalyzerApp:
             ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_atr.set_ylabel("ATR", color=self.C["tx"])
             ax_atr.tick_params(axis='y', labelcolor=self.C["tx"])
+            ax_atr.tick_params(axis='x', labelcolor=self.C['tx'])
             ax_atr.set_title("ATR 平均真实波幅", color=self.C["tx"], fontsize=9)
         
         # 绘制MACD
@@ -1102,6 +1103,7 @@ class GoldAnalyzerApp:
             ax_macd.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_macd.set_ylabel("MACD", color=self.C["tx"])
             ax_macd.tick_params(axis='y', labelcolor=self.C["tx"])
+            ax_macd.tick_params(axis='x', labelcolor=self.C['tx'])
             ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
         
