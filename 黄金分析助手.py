@@ -336,6 +336,8 @@ class GoldAnalyzerApp:
         self._prev_close = {}
         self._init_vars()
         self._build_ui()
+        self._initialized = True
+        self._set_period(self.tv.get())
         self._start_refresh()
 
     def _init_vars(self):
@@ -679,8 +681,9 @@ class GoldAnalyzerApp:
 
     def _set_period(self, tf):
         self.tv.set(tf)
-        self._signal()
-        self._chart()
+        if hasattr(self, '_initialized') and self._initialized:
+            self._signal()
+            self._chart()
         # 更新按钮样式
         periods = ['M1','M5','M6','M15','M30','H1','H4','D1']
         for j, btn in enumerate(self.period_btns):
