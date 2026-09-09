@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.024 - 完整版
+黄金分析助手 v3.025 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -55,6 +55,7 @@ AUTO_MAX_POS = int(_cfg.get('AutoTrade', 'max_positions', fallback='3'))
 WINDOW_WIDTH = int(_cfg.get('Window', 'width', fallback='1920'))
 WINDOW_HEIGHT = int(_cfg.get('Window', 'height', fallback='1080'))
 REFRESH_MS = int(_cfg.get('Display', 'refresh_interval_ms', fallback='3000'))
+COUNTDOWN_MS = 1000  # 倒计时更新频率
 ALERT_PCT = float(_cfg.get('Alerts', 'price_change_pct', fallback='1.0'))
 ALERT_CD = int(_cfg.get('Alerts', 'cooldown_sec', fallback='120'))
 class MT5Engine:
@@ -284,7 +285,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.024")
+        self.root.title("黄金分析助手 v3.025")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -350,7 +351,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.024 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.025 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -940,7 +941,7 @@ class GoldAnalyzerApp:
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
         self.fig.tight_layout(); self.canvas.draw()
     def _update_countdown(self):
-        """更新周期倒计时"""
+        """更新周期倒计时 - 每秒刷新"""
         try:
             tf = self.tv.get()
             if not tf: return
@@ -953,10 +954,12 @@ class GoldAnalyzerApp:
             remaining = int(period_secs - elapsed)
             mins = remaining // 60
             secs = remaining % 60
-            self.countdown_var.set(f"{mins:02d}:{secs:02d}")
+            countdown_str = f"{mins:02d}:{secs:02d}"
+            self.countdown_var.set(countdown_str)
+            # 直接更新图表上的标注
             if self.countdown_annot:
-                self.countdown_annot.set_text(f"倒计时: {self.countdown_var.get()}")
-                self.canvas.draw()
+                self.countdown_annot.set_text(f"倒计时: {countdown_str}")
+                self.canvas.draw_idle()
         except:
             pass
 
