@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.030 - 完整版
+黄金分析助手 v3.031 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -124,11 +124,11 @@ class MT5Engine:
 
     def macd(self, c, f=12, s=26):
         if len(c)<s: return 0, [], []
-        # 计算历史MACD
+        # 计算历史MACD - 使用EMA而非简单均值
         macd_hist = []
         for i in range(s-1, len(c)):
             window = c[i-s+1:i+1]
-            m = np.mean(window[-f:]) - np.mean(window)
+            m = np.mean(window[-f:]) - np.mean(window[-s:])
             macd_hist.append(m)
         # 计算信号线
         signal = []
@@ -197,7 +197,7 @@ class MT5Engine:
         elif ss>bs: ov=("偏空","orange")
         else: ov=("观望","gray")
         return {'sym':sym,'name':self.SYMBOLS.get(sym,sym),'price':t.bid,'ask':t.ask,
-                'spread':t.ask-t.bid,'trend':trend,'ma':ma,'rsi':rsi,'macd':m,
+                'spread':t.ask-t.bid,'trend':trend,'ma':ma,'rsi':rsi,'macd':m,'macd_hist':mh,
                 'bb':bb,'atr':atr,'atr_pct':ap,'vol':vl,'signals':sig,'overall':ov,
                 'bs':bs,'ss':ss,'res':res,'sup':sup,'closes':c,'rates':r}
     def connect(self):
@@ -304,7 +304,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.030")
+        self.root.title("黄金分析助手 v3.031")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -370,7 +370,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.030 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.031 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
