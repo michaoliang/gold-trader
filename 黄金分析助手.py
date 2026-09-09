@@ -1013,7 +1013,7 @@ class GoldAnalyzerApp:
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
         # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 1.5, 1.5], hspace=1)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 1, 1], hspace=1)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
@@ -1075,7 +1075,7 @@ class GoldAnalyzerApp:
             ax_atr.fill_between(ti[-disp_len:], 0, atr_hist[-disp_len:], alpha=0.3, color="purple")
             ax_atr.axhline(y=atr_val, color="yellow", linewidth=1, linestyle="--", alpha=0.7, label=f"当前={atr_val:.2f}")
             ax_atr.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
-            ax_atr.set_ylabel("ATR", color="purple")
+            ax_atr.set_ylabel("ATR", color=self.C["tx"])
             ax_atr.tick_params(axis='y', labelcolor="purple")
             ax_atr.set_title("ATR 平均真实波幅", color=self.C["tx"], fontsize=9)
         
@@ -1102,6 +1102,7 @@ class GoldAnalyzerApp:
             ax_macd.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
             ax_macd.set_ylabel("MACD", color=self.C["tx"])
             ax_macd.tick_params(axis='y', labelcolor=self.C["dim"])
+            ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
         
         # 手动调整子图间距，避免tight_layout警告
@@ -1274,6 +1275,7 @@ if __name__ == "__main__":
     app = GoldAnalyzerApp(root)
     root.protocol("WM_DELETE_WINDOW", app._close)
     root.mainloop()
+
 
 
 
