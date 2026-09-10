@@ -541,6 +541,11 @@ class GoldAnalyzerApp:
         for k in ["bal", "eq", "mg", "free", "prof"]:
             self.avars[k] = tk.StringVar(value="--")
         
+        # 布林带相关变量（防止KeyError）
+        self.bb_upper_var = tk.StringVar(value="--")
+        self.bb_middle_var = tk.StringVar(value="--")
+        self.bb_lower_var = tk.StringVar(value="--")
+        
         # 确保价格相关字典已初始化（防止KeyError）
         if not hasattr(self, '_prev'):
             self._prev = {}
