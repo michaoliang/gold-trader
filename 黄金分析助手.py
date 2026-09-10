@@ -600,7 +600,7 @@ class GoldAnalyzerApp:
             work_w = sw
             work_h = sh
         # 窗口大小为工作区的 95%，确保完整显示
-        win_w = int(work_w * 0.9)
+        win_w = int(work_w * 0.95)
         win_h = int(work_h * 0.8)
         self.root.geometry(f"{win_w}x{win_h}")
         self.root.update_idletasks()
@@ -665,15 +665,22 @@ class GoldAnalyzerApp:
         self._panel_chart_h1(mid)
         # 右列：可滚动面板（可折叠区域）
         right = tk.Frame(main, bg=self.C["bg"])
-        right.pack(side="left", fill="both", expand=True, padx=(0, 8))
-
-
+        right.pack(side="left", fill="both", padx=(0, 8))
+        right.pack_propagate(False)
+        right.configure(width=600)
 
         self.right_canvas = tk.Canvas(right, bg=self.C["card"], highlightthickness=0)
         self.right_scroll = tk.Scrollbar(
             right, orient="vertical", command=self.right_canvas.yview
         )
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["card"])
+        self.right_scrollable.bind(
+            "<Configure>",
+            lambda e: (
+                self.right_scrollable.configure(width=self.right_canvas.winfo_width()),
+                self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all"))
+            )[1],
+        )
         self.right_canvas.create_window(
             (0, 0), window=self.right_scrollable, anchor="nw"
         )
