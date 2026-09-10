@@ -447,10 +447,7 @@ class GoldAnalyzerApp:
         self._panel_chart_h1(mid)
         # 右列：可滚动面板（可折叠区域）
         right = tk.Frame(main, bg=self.C["bg"])
-        right.pack(side="left", fill="both", padx=(0, 8))
-        right.pack_propagate(False)
-        right.configure(width=500)
-        right.pack_propagate(False)
+        right.pack(side="left", fill="both", expand=True)
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
         self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
