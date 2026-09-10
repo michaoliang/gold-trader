@@ -859,6 +859,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["bal"] = tk.StringVar(value="--")
         tk.Label(
             bal_card,
             textvariable=self.avars["bal"],
@@ -877,6 +878,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["eq"] = tk.StringVar(value="--")
         tk.Label(
             eq_card,
             textvariable=self.avars["eq"],
@@ -899,6 +901,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["mg"] = tk.StringVar(value="--")
         tk.Label(
             mg_card,
             textvariable=self.avars["mg"],
@@ -917,6 +920,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["free"] = tk.StringVar(value="--")
         tk.Label(
             free_card,
             textvariable=self.avars["free"],
@@ -935,6 +939,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["prof"] = tk.StringVar(value="--")
         self.prof_lbl = tk.Label(
             prof_card,
             textvariable=self.avars["prof"],
