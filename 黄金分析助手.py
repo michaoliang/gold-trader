@@ -540,6 +540,20 @@ class GoldAnalyzerApp:
         self.avars = {}
         for k in ["bal", "eq", "mg", "free", "prof"]:
             self.avars[k] = tk.StringVar(value="--")
+        
+        # 确保价格相关字典已初始化（防止KeyError）
+        if not hasattr(self, '_prev'):
+            self._prev = {}
+        if not hasattr(self, '_prev_close'):
+            self._prev_close = {}
+        if not hasattr(self, 'pcl'):
+            self.pcl = {}
+        if not hasattr(self, 'price_vars'):
+            self.price_vars = {}
+        if not hasattr(self, 'daily_vars'):
+            self.daily_vars = {}
+        if not hasattr(self, 'daily_lbls'):
+            self.daily_lbls = {}
         self.ivars = {}
         for k in ["ma5", "ma10", "ma20", "ma50", "rsi", "macd", "bbu", "bbl", "atr"]:
             self.ivars[k] = tk.StringVar(value="--")
@@ -1670,24 +1684,26 @@ class GoldAnalyzerApp:
                 if t:
                     dig = self.anz._sym_digits.get(sym, 2)
                     prev = self._prev.get(sym)
-                    if prev:
-                        ch = t.bid - prev
-                        pct = ch / prev * 100 if prev else 0
-                        sg = "+" if ch >= 0 else ""
-                        co = self.C["green"] if ch >= 0 else self.C["red"]
-                        self.pcl[sym].config(bg=co)
-                        self.price_vars[sym].set(f"{t.bid:.{dig}f}  {sg}{pct:.2f}%")
-                    else:
-                        self.price_vars[sym].set(f"{t.bid:.{dig}f}")
-                    self._prev[sym] = t.bid
-                    pc = self._prev_close.get(sym)
-                    if pc:
-                        dch = t.bid - pc
-                        dpct = dch / pc * 100
-                        dsg = "+" if dch >= 0 else ""
-                        dco = self.C["green"] if dch >= 0 else self.C["red"]
-                        self.daily_vars[sym].set(f"[日{dsg}{dpct:.2f}%]")
-                        self.daily_lbls[sym].config(fg=dco)
+                    # 安全检查：确保字典中有该键
+                    if sym in self.pcl and sym in self.price_vars:
+                        if prev:
+                            ch = t.bid - prev
+                            pct = ch / prev * 100 if prev else 0
+                            sg = "+" if ch >= 0 else ""
+                            co = self.C["green"] if ch >= 0 else self.C["red"]
+                            self.pcl[sym].config(bg=co)
+                            self.price_vars[sym].set(f"{t.bid:.{dig}f}  {sg}{pct:.2f}%")
+                        else:
+                            self.price_vars[sym].set(f"{t.bid:.{dig}f}")
+                        self._prev[sym] = t.bid
+                        pc = self._prev_close.get(sym)
+                        if pc and sym in self.daily_vars and sym in self.daily_lbls:
+                            dch = t.bid - pc
+                            dpct = dch / pc * 100
+                            dsg = "+" if dch >= 0 else ""
+                            dco = self.C["green"] if dch >= 0 else self.C["red"]
+                            self.daily_vars[sym].set(f"[日{dsg}{dpct:.2f}%]")
+                            self.daily_lbls[sym].config(fg=dco)
             self._signal()
             self._account()
             self._chart_m1()
@@ -2210,7 +2226,22 @@ class GoldAnalyzerApp:
 
     def _account(self):
         try:
-            i = self.anz.account()
+            # 调试：写入文件
+            try:
+                with open(r"E:\MySoftware\黄金分析工具_Portable\debug_account.log", "a", encoding="utf-8") as _f:
+                    if not hasattr(self, 'avars') or not self.avars:
+                        _f.write("[DEBUG] avars not initialized!\n")
+                        return
+                    _f.write(f"[DEBUG] avars keys: {list(self.avars.keys())}\n")
+                    
+                    i = self.anz.account()
+                    _f.write(f"[DEBUG] account info: {i}\n")
+                    if not i:
+                        _f.write("[DEBUG] No account info!\n")
+                        return
+                    _f.write(f"[DEBUG] Setting values...\n")
+            except Exception as _e:
+                pass
             if not i:
                 return
             for k, short in [
