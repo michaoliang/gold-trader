@@ -1,0 +1,4 @@
+  File "E:\MySoftware\黄金分析工具_Portable\黄金分析助手.py", line 467
+    def _panel_signal(self, parent):
+                                    ^
+IndentationError: unindent does not match any outer indentation level

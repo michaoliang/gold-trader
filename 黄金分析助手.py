@@ -1,6 +1,8 @@
+import ctypes
+from ctypes import wintypes
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.077 - 完整版
+黄金分析助手 v3.078 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -319,7 +321,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.077")
+        self.root.title("黄金分析助手 v3.078")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -348,8 +350,8 @@ class GoldAnalyzerApp:
         self.period_btns_m1 = []
         self.period_btns_h1 = []
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
-        self.countdown_annot_m1 = None  # M1图表倒计时标注
-        self.countdown_annot_h1 = None  # H1图表倒计时标注
+        self.countdown_text_m1 = None  # M1图表倒计时文本
+        self.countdown_text_h1 = None  # H1图表倒计时文本
         self.sl_label = None
         self.avars = {}
         for k in ['bal','eq','mg','free','prof']: self.avars[k] = tk.StringVar(value='--')
@@ -385,13 +387,35 @@ class GoldAnalyzerApp:
 
     def _build_ui(self):
         self.root.configure(bg=self.C["bg"])
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        # 获取屏幕工作区（排除任务栏）
+        try:
+            user32 = ctypes.windll.user32
+            class RECT(ctypes.Structure):
+                _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG),
+                            ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
+            rect = RECT()
+            user32.SystemParametersInfoW(48, 0, ctypes.byref(rect), 0)
+            work_w = rect.right - rect.left
+            work_h = rect.bottom - rect.top
+        except:
+            sw = self.root.winfo_screenwidth()
+            sh = self.root.winfo_screenheight()
+            work_w = sw
+            work_h = sh
+        # 窗口大小为工作区的 95%，确保完整显示
+        win_w = int(work_w * 0.95)
+        win_h = int(work_h * 0.95)
+        self.root.geometry(f"{win_w}x{win_h}")
         self.root.update_idletasks()
-        sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
+        # 居中显示
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - win_w) // 2
+        y = (sh - win_h) // 2
+        self.root.geometry(f"{win_w}x{win_h}+{x}+{y}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.077 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.078 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -407,7 +431,7 @@ class GoldAnalyzerApp:
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(5, 0))
         # 新三列布局：M1图表 | H1图表 | 可折叠面板
         main = tk.Frame(self.root, bg=self.C["bg"])
-        main.pack(fill="both", expand=True, padx=16, pady=6)
+        main.pack(fill="both", expand=True, padx=16, pady=(6, 10))
         # 左列：M1 K线图 (固定宽度600px)
         left = tk.Frame(main, bg=self.C["bg"])
         left.pack(side="left", fill="both", padx=(0, 8))
@@ -435,6 +459,17 @@ class GoldAnalyzerApp:
         
         # 右侧折叠面板
         self._build_right_panels()
+
+        # 修复右侧滚动区域
+        self.root.after(100, self._fix_right_scroll)
+
+    
+    def _fix_right_scroll(self):
+        """修复右侧滚动区域"""
+        try:
+            self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all"))
+        except:
+            pass
 
     def _panel_prices(self, parent):
         f = self._frame(parent, "实时行情")
@@ -643,7 +678,7 @@ class GoldAnalyzerApp:
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
-        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 3, 3], hspace=0.08)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 3, 3], hspace=0.25)
         ax = fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
@@ -680,7 +715,7 @@ class GoldAnalyzerApp:
             ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
-        ax.set_title(title_prefix + " " + chart_tv.get() + " 当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
+        ax.set_title(title_prefix + " " + chart_tv.get() + " 当前: " + "{:.2f}".format(a["price"]) + "  |  " + self.countdown_var.get(), color=self.C["tx"], fontsize=10)
         ax.tick_params(colors=self.C["tx"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
@@ -721,18 +756,8 @@ class GoldAnalyzerApp:
             ax_macd.tick_params(axis='x', labelcolor=self.C['tx'])
             ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
-        # countdown display - 简洁样式
-        cd = self.countdown_var.get()
-        ak = "countdown_text_" + title_prefix.lower()
-        # 只创建一次，后续通过 _update_countdown 更新
-        countdown_text = getattr(self, ak, None)
-        if countdown_text is None:
-            countdown_text = ax.text(0.98, 0.95, f"{cd}", transform=ax.transAxes,
-                        fontsize=10, ha="right", va="top", color="#FFD700", fontweight="bold")
-            setattr(self, ak, countdown_text)
-        else:
-            countdown_text.set_text(f"{cd}")
-        fig.subplots_adjust(hspace=0.08)
+        # countdown已合并到标题
+        fig.subplots_adjust(hspace=0.25)
         fig.canvas.draw()
 
     def _build_right_panels(self):
@@ -993,11 +1018,13 @@ class GoldAnalyzerApp:
                 if t: self._prev[sym] = t.bid
         self._target(); self._refresh()
         self._start_countdown_timer()
-    
+
+
     def _start_countdown_timer(self):
         """启动倒计时定时器 - 每秒更新"""
         self._update_countdown()
         self.root.after(1000, self._start_countdown_timer)
+
 
     def _check_ea_status(self):
         """检查EA状态"""
@@ -1068,6 +1095,7 @@ class GoldAnalyzerApp:
         except:
             pass
 
+
     def _panel_auto_trade(self, parent):
         f = self._frame(parent, "自动交易")
         tf = tk.Frame(f, bg=self.C["card"]); tf.pack(fill="x", padx=8)
@@ -1090,6 +1118,7 @@ class GoldAnalyzerApp:
         self.auto_log = tk.Text(f, height=5, font=("Consolas", 9), fg=self.C["tx"], bg=self.C["card"], relief="flat", state="disabled")
         self.auto_log.pack(fill="both", expand=True, padx=8, pady=(4,0))
 
+
     def _toggle_auto(self):
         """切换自动交易开关"""
         self.auto_on = self.auto_on_var.get()
@@ -1099,6 +1128,7 @@ class GoldAnalyzerApp:
         else:
             self.auto_status_var.set("已停止")
             self._log_auto("自动交易已关闭")
+
 
     def _log_auto(self, msg):
         """记录自动交易日志"""
@@ -1307,7 +1337,7 @@ class GoldAnalyzerApp:
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
         # 创建三面板：K线图占70%，ATR和MACD各占15%
         from matplotlib import gridspec
-        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 4, 4], hspace=0.08)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 4, 4], hspace=0.25)
         ax = self.fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = self.fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = self.fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
