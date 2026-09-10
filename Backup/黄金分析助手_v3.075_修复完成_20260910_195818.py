@@ -348,8 +348,7 @@ class GoldAnalyzerApp:
         self.period_btns_m1 = []
         self.period_btns_h1 = []
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
-        self.countdown_annot_m1 = None  # M1图表倒计时标注
-        self.countdown_annot_h1 = None  # H1图表倒计时标注
+        self.countdown_annot = None  # 倒计时标注对象
         self.sl_label = None
         self.avars = {}
         for k in ['bal','eq','mg','free','prof']: self.avars[k] = tk.StringVar(value='--')
@@ -625,16 +624,16 @@ class GoldAnalyzerApp:
         self.fig_m1.clear()
         a = self.anz.analyze("XAUUSDc", self.chart_tv_m1.get())
         if not a or a.get("rates") is None: return
-        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1, "m1")
+        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1)
 
     def _chart_h1(self):
         """绘制H1图表"""
         self.fig_h1.clear()
         a = self.anz.analyze("XAUUSDc", self.chart_tv_h1.get())
         if not a or a.get("rates") is None: return
-        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1, "h1")
+        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1)
 
-    def _draw_chart(self, fig, a, title_prefix, chart_tv, annot_key="m1"):
+    def _draw_chart(self, fig, a, title_prefix, chart_tv):
         """通用图表绘制方法"""
         from matplotlib import gridspec
         r = a["rates"]; n = min(len(r), 80)

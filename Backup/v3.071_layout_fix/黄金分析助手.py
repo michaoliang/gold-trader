@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.068 - 完整版
+黄金分析助手 v3.071 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -23,16 +23,28 @@ try:
 except ImportError:
     print('tkinter missing'); exit(1)
 
-try:
+# 自适应选择matplotlib后端：优先Qt5Agg(GPU加速)，回退TkAgg(CPU)
+def _setup_matplotlib_backend():
+    try:
+        import matplotlib
+        matplotlib.use('Qt5Agg')
+        from matplotlib.backends.backend_qt5agg import FigureCanvasTkAgg
+        print('使用 Qt5Agg 后端 (GPU加速)')
+        return FigureCanvasTkAgg
+    except ImportError:
+        pass
     import matplotlib
     matplotlib.use('TkAgg')
-    matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei']
-    matplotlib.rcParams['axes.unicode_minus'] = False
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    from matplotlib.figure import Figure
-    from matplotlib.patches import Rectangle
-except ImportError:
-    print('matplotlib not found'); exit(1)
+    print('使用 TkAgg 后端 (CPU渲染)')
+    return FigureCanvasTkAgg
+
+FigureCanvasTkAgg = _setup_matplotlib_backend()
+import matplotlib
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei']
+matplotlib.rcParams['axes.unicode_minus'] = False
+from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 
 try:
     import winsound
@@ -75,9 +87,16 @@ class MT5Engine:
               'M30':mt5.TIMEFRAME_M30,'H1':mt5.TIMEFRAME_H1,'H4':mt5.TIMEFRAME_H4,'D1':mt5.TIMEFRAME_D1}
 
     def __init__(self):
-        self.ok = mt5.initialize()
+        self.ok = False
         self._connecting = False
         self._sym_digits = {}
+        # 尝试连接但不强制初始化
+        try:
+            acc = mt5.account_info()
+            if acc:
+                self.ok = True
+        except:
+            pass
 
     def shutdown(self):
         if self.ok: mt5.shutdown()
@@ -216,18 +235,43 @@ class MT5Engine:
                 'bb':bb,'atr':atr,'atr_hist':atr_hist,'atr_pct':ap,'vol':vl,'signals':sig,'overall':ov,
                 'bs':bs,'ss':ss,'res':res,'sup':sup,'closes':c,'rates':r}
     def connect(self):
+        """连接MT5 - 只在未连接时初始化，避免影响登录缓存"""
         if getattr(self, "_connecting", False): return
+        if self.ok: return  # 已连接则不重复初始化
         self._connecting = True
         try:
-            self.ok = mt5.initialize()
-            if self.ok:
+            # 先尝试获取账户信息，如果成功说明已连接
+            acc = mt5.account_info()
+            if acc:
+                self.ok = True
+                self._connecting = False
                 for sym in self.SYMBOLS:
                     si = mt5.symbol_info(sym)
                     if si:
                         self._sym_digits[sym] = si.digits if hasattr(si, "digits") else 2
-                self._connecting = False
-        except Exception:
+                return
+            # 未连接时才尝试初始化，带超时保护
+            import threading
+            result = [None]
+            def _init_thread():
+                result[0] = mt5.initialize(path=TERMINAL_PATH)
+            t = threading.Thread(target=_init_thread, daemon=True)
+            t.start()
+            t.join(timeout=8)
+            if t.is_alive():
+                self.ok = False
+                _dbg("MT5 init timeout")
+            else:
+                self.ok = result[0]
+                if self.ok:
+                    for sym in self.SYMBOLS:
+                        si = mt5.symbol_info(sym)
+                        if si:
+                            self._sym_digits[sym] = si.digits if hasattr(si, "digits") else 2
             self._connecting = False
+        except Exception as e:
+            self._connecting = False
+            _dbg(f'connect error: {e}')
 
     def prev_close(self, sym):
         try:
@@ -319,7 +363,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.068")
+        self.root.title("黄金分析助手 v3.071")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -348,8 +392,7 @@ class GoldAnalyzerApp:
         self.period_btns_m1 = []
         self.period_btns_h1 = []
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
-        self.countdown_annot_m1 = None  # M1图表倒计时标注
-        self.countdown_annot_h1 = None  # H1图表倒计时标注
+        self.countdown_annot = None  # 倒计时标注对象
         self.sl_label = None
         self.avars = {}
         for k in ['bal','eq','mg','free','prof']: self.avars[k] = tk.StringVar(value='--')
@@ -385,13 +428,41 @@ class GoldAnalyzerApp:
 
     def _build_ui(self):
         self.root.configure(bg=self.C["bg"])
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        # 读取保存的窗口位置和大小
+        try:
+            import configparser as _cfg_mod
+            _cfg_w = _cfg_mod.ConfigParser()
+            _cfg_w.read(r'E:\MySoftware\黄金分析工具_Portable\config.ini', encoding='utf-8')
+            _win_w = int(_cfg_w.get('Window', 'width', fallback=str(WINDOW_WIDTH)))
+            _win_h = int(_cfg_w.get('Window', 'height', fallback=str(WINDOW_HEIGHT)))
+            _win_x = _cfg_w.get('Window', 'x', fallback='center')
+            _win_y = _cfg_w.get('Window', 'y', fallback='center')
+        except:
+            _win_w, _win_h = WINDOW_WIDTH, WINDOW_HEIGHT
+            _win_x, _win_y = 'center', 'center'
+        
+        self.root.geometry(f'{_win_w}x{_win_h}')
         self.root.update_idletasks()
+        # 居中或恢复保存的位置
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
+        if _win_x == 'center':
+            x_pos = (sw - _win_w) // 2
+        else:
+            x_pos = max(0, min(int(_win_x), sw - _win_w))
+        if _win_y == 'center':
+            y_pos = max(20, (sh - _win_h) // 2)
+        else:
+            y_pos = max(20, min(int(_win_y), sh - _win_h - 40))
+        self.root.geometry(f'{_win_w}x{_win_h}+{x_pos}+{y_pos}')
+        # 保存位置到配置
+        try:
+            _cfg_w.set('Window', 'x', str(x_pos))
+            _cfg_w.set('Window', 'y', str(y_pos))
+            _cfg_w.write(open(r'E:\MySoftware\黄金分析工具_Portable\config.ini', 'w', encoding='utf-8'))
+        except: pass
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.068 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.071 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -435,6 +506,17 @@ class GoldAnalyzerApp:
         
         # 右侧折叠面板
         self._build_right_panels()
+        self.root.after(100, self._fix_right_scroll)
+    
+    def _fix_right_scroll(self):
+        """修复右侧滚动区域 - 确保内容完整显示"""
+        try:
+            # 更新滚动区域
+            self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all"))
+            # 确保滚动条可见
+            self.right_scroll.config(command=self.right_canvas.yview)
+        except:
+            pass
 
     def _panel_prices(self, parent):
         f = self._frame(parent, "实时行情")
@@ -625,16 +707,16 @@ class GoldAnalyzerApp:
         self.fig_m1.clear()
         a = self.anz.analyze("XAUUSDc", self.chart_tv_m1.get())
         if not a or a.get("rates") is None: return
-        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1, "m1")
+        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1)
 
     def _chart_h1(self):
         """绘制H1图表"""
         self.fig_h1.clear()
         a = self.anz.analyze("XAUUSDc", self.chart_tv_h1.get())
         if not a or a.get("rates") is None: return
-        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1, "h1")
+        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1)
 
-    def _draw_chart(self, fig, a, title_prefix, chart_tv, annot_key="m1"):
+    def _draw_chart(self, fig, a, title_prefix, chart_tv):
         """通用图表绘制方法"""
         from matplotlib import gridspec
         r = a["rates"]; n = min(len(r), 80)
@@ -643,7 +725,7 @@ class GoldAnalyzerApp:
         m5 = np.convolve(cl, np.ones(5)/5, mode="valid")
         m10 = np.convolve(cl, np.ones(10)/10, mode="valid")
         m20 = np.convolve(cl, np.ones(20)/20, mode="valid")
-        gs = gridspec.GridSpec(3, 1, height_ratios=[8, 3, 3], hspace=0.08)
+        gs = gridspec.GridSpec(3, 1, height_ratios=[7, 2, 2], hspace=0.1)
         ax = fig.add_subplot(gs[0]); ax.set_facecolor(self.C["card"])
         ax_atr = fig.add_subplot(gs[1]); ax_atr.set_facecolor(self.C["card"])
         ax_macd = fig.add_subplot(gs[2]); ax_macd.set_facecolor(self.C["card"])
@@ -680,7 +762,19 @@ class GoldAnalyzerApp:
             ax.axhline(y=a["price"], color=self.C["yellow"], linestyle="-", linewidth=1.5, alpha=0.8, label="当前价")
         if a["sup"]: ax.axhline(y=a["sup"], color="green", linestyle="--", alpha=0.5, label="支撑")
         if a["res"]: ax.axhline(y=a["res"], color="red", linestyle="--", alpha=0.5, label="阻力")
-        ax.set_title(title_prefix + " " + chart_tv.get() + " 当前: " + f"{a['price']:.2f}", color=self.C["tx"], fontsize=10)
+        # 添加倒计时到图表标题
+m1_tf = getattr(self, 'chart_tv_m1', None)
+h1_tf = getattr(self, 'chart_tv_h1', None)
+m1_str = m1_tf.get() if m1_tf else 'M1'
+h1_str = h1_tf.get() if h1_tf else 'H1'
+period_secs = {'M1': 60, 'M5': 300, 'M6': 360, 'M15': 900, 'M30': 1800, 'H1': 3600, 'H4': 14400, 'D1': 86400}
+secs = period_secs.get(chart_tv.get(), 60)
+import time as _time
+rem = secs - int(_time.time() % secs)
+m_rem = rem // 60
+s_rem = rem % 60
+countdown_str = f"M{m_rem:02d}:{s_rem:02d}" if chart_tv == self.chart_tv_m1 else f"H{m_rem:02d}:{s_rem:02d}"
+ax.set_title(f"{title_prefix} {chart_tv.get()} 当前:{a['price']:.2f} 剩余:{countdown_str}", color=self.C['tx'], fontsize=10)
         ax.tick_params(colors=self.C["tx"])
         for sp in ax.spines.values(): sp.set_color(self.C["bd"])
         ax.legend(loc="upper left", facecolor=self.C["card"], edgecolor=self.C["bd"], labelcolor=self.C["tx"])
@@ -721,17 +815,6 @@ class GoldAnalyzerApp:
             ax_macd.tick_params(axis='x', labelcolor=self.C['tx'])
             ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
-        # countdown display - 简洁样式
-        cd = self.countdown_var.get()
-        ak = "countdown_text_" + title_prefix.lower()
-        # 只创建一次，后续通过 _update_countdown 更新
-        countdown_text = getattr(self, ak, None)
-        if countdown_text is None:
-            countdown_text = ax.text(0.98, 0.95, f"{cd}", transform=ax.transAxes,
-                        fontsize=10, ha="right", va="top", color="#FFD700", fontweight="bold")
-            setattr(self, ak, countdown_text)
-        else:
-            countdown_text.set_text(f"{cd}")
         fig.subplots_adjust(hspace=0.08)
         fig.canvas.draw()
 
@@ -769,6 +852,7 @@ class GoldAnalyzerApp:
         self._panel_indicators(self.bottom_content)
         self._panel_alerts(self.bottom_content)
         self._panel_auto_trade(self.bottom_content)
+        self._panel_settings(self.bottom_content)
 
     def _toggle_top(self):
         if self.top_content.winfo_ismapped():
@@ -910,7 +994,11 @@ class GoldAnalyzerApp:
         self.tv.set(tf)
         if hasattr(self, '_initialized') and self._initialized:
             self._signal()
-            self._chart_m1(); self._chart_h1()
+            # 只在数据变化时才重绘图表，减少卡顿
+            if not hasattr(self, '_last_chart_time') or (datetime.now().timestamp() - self._last_chart_time) > 5:
+                self._chart_m1()
+                self._chart_h1()
+                self._last_chart_time = datetime.now().timestamp()
         # 更新按钮样式
         periods = ['M1','M5','M6','M15','M30','H1','H4','D1']
         for j, btn in enumerate(self.period_btns):
@@ -932,6 +1020,7 @@ class GoldAnalyzerApp:
             self.root.after(REFRESH_MS, self._refresh)
             return
         try:
+            # 优化：减少不必要的tick调用，只在需要时获取
             for sym, name in MT5Engine.SYMBOLS.items():
                 t = self.anz.tick(sym)
                 if t:
@@ -957,7 +1046,11 @@ class GoldAnalyzerApp:
                         self.daily_lbls[sym].config(fg=dco)
             self._signal()
             self._account()
-            self._chart_m1(); self._chart_h1()
+            # 只在数据变化时才重绘图表，减少卡顿
+            if not hasattr(self, '_last_chart_time') or (datetime.now().timestamp() - self._last_chart_time) > 5:
+                self._chart_m1()
+                self._chart_h1()
+                self._last_chart_time = datetime.now().timestamp()
             self._check_alerts()
             if self.auto_on: self._auto_trade_step()
             self._check_ea_status()
@@ -995,9 +1088,33 @@ class GoldAnalyzerApp:
         self._start_countdown_timer()
     
     def _start_countdown_timer(self):
-        """启动倒计时定时器 - 每秒更新"""
+        """启动倒计时定时器 - 每秒更新，但只在实际变化时更新标题"""
         self._update_countdown()
         self.root.after(1000, self._start_countdown_timer)
+
+    def _update_countdown(self):
+        """更新周期倒计时 - 优化版，减少不必要的标题更新"""
+        try:
+            now = datetime.now()
+            m1_tf = getattr(self, "chart_tv_m1", None)
+            h1_tf = getattr(self, "chart_tv_h1", None)
+            m1_tf = m1_tf.get() if m1_tf else "M1"
+            h1_tf = h1_tf.get() if h1_tf else "H1"
+            period_secs = {"M1": 60, "M5": 300, "M6": 360, "M15": 900, "M30": 1800, "H1": 3600, "H4": 14400, "D1": 86400}
+            m1_secs = period_secs.get(m1_tf, 60)
+            h1_secs = period_secs.get(h1_tf, 3600)
+            epoch = now.timestamp()
+            m1_rem = int(m1_secs - (epoch % m1_secs))
+            h1_rem = int(h1_secs - (epoch % h1_secs))
+            m1_str = f"{m1_rem//60:02d}:{m1_rem%60:02d}"
+            h1_str = f"{h1_rem//60:02d}:{h1_rem%60:02d}"
+            # 只在实际变化时更新标题，减少重绘
+            new_title = f"HJ ANALYZER v3.071 - M1:{m1_str} H1:{h1_str}"
+            if self.root.title() != new_title:
+                self.root.title(new_title)
+            self.countdown_var.set(m1_str)
+        except Exception as e:
+            _dbg(f"_update_countdown error: {e}")
 
     def _check_ea_status(self):
         """检查EA状态"""
@@ -1132,6 +1249,92 @@ class GoldAnalyzerApp:
                  font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], wraplength=500).pack(anchor='w')
         self._check_ea_status()
 
+
+    def _panel_settings(self, parent):
+        """设置面板"""
+        f = self._frame(parent, "设置")
+        # MT5连接设置
+        stf = tk.Frame(f, bg=self.C['card']); stf.pack(fill='x', padx=8, pady=(4,0))
+        tk.Label(stf, text='MT5终端:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(0,4))
+        self.settings_mt5_path_var = tk.StringVar(value=r'D:\\MetaTrader 5 EXNESS')
+        tk.Entry(stf, textvariable=self.settings_mt5_path_var, font=('Consolas', 9),
+                 bg=self.C['bg'], fg=self.C['tx'], relief='flat', width=40).pack(side='left', fill='x', expand=True, padx=(0,4))
+        tk.Button(stf, text='选择', command=self._select_mt5_path,
+                  bg=self.C['card'], fg=self.C['accent'], font=('Consolas', 9),
+                  cursor='hand2', relief='flat').pack(side='left', padx=4)
+        tk.Button(stf, text='重连', command=self._reconnect_mt5,
+                  bg=self.C['accent'], fg=self.C['bg'], font=('Consolas', 9, 'bold'),
+                  cursor='hand2', relief='flat', width=6).pack(side='left', padx=4)
+        # 连接状态
+        sf = tk.Frame(f, bg=self.C['card']); sf.pack(fill='x', padx=8, pady=(4,0))
+        tk.Label(sf, text='连接状态:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(0,8))
+        self.settings_conn_var = tk.StringVar(value='未连接')
+        tk.Label(sf, textvariable=self.settings_conn_var, font=('Consolas', 9), fg=self.C['yellow'], bg=self.C['card']).pack(side='left', padx=(0,15))
+        # 保存按钮
+        bf = tk.Frame(f, bg=self.C['card']); bf.pack(fill='x', padx=8, pady=4)
+        tk.Button(bf, text='保存设置', command=self._save_settings,
+                  bg=self.C['accent'], fg=self.C['bg'], font=('Consolas', 9, 'bold'),
+                  cursor='hand2', relief='flat', width=10).pack(side='left')
+        tk.Label(bf, text='提示: 修改路径后需点击重连', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(10,0))
+
+    
+    def _select_mt5_path(self):
+        """选择MT5终端路径"""
+        from tkinter import filedialog
+        fpath = filedialog.askopenfilename(
+            title='选择MT5终端',
+            filetypes=[('EXE文件', '*.exe'), ('所有文件', '*.*')],
+            initialdir=r'D:\\'
+        )
+        if fpath:
+            dir_path = os.path.dirname(fpath)
+            self.settings_mt5_path_var.set(dir_path)
+            _dbg(f'Selected MT5 path: {dir_path}')
+
+    def _reconnect_mt5(self):
+        """重新连接MT5 - 使用线程避免阻塞UI，支持切换MT5终端"""
+        import threading
+        def _do_reconnect():
+            try:
+                mt5_path = self.settings_mt5_path_var.get()
+                self.anz.shutdown()
+                import time; time.sleep(1)
+                import MetaTrader5 as mt5_module
+                result = mt5_module.initialize(path=mt5_path)
+                def _update_ui():
+                    if result:
+                        self.anz.ok = True
+                        self.settings_conn_var.set('已连接')
+                        if hasattr(self, 'conn_lbl'):
+                            self.conn_lbl.config(fg=self.C['green'])
+                    else:
+                        self.settings_conn_var.set('连接失败')
+                        if hasattr(self, 'conn_lbl'):
+                            self.conn_lbl.config(fg=self.C['red'])
+                self.root.after(0, _update_ui)
+            except Exception as e:
+                def _update_err():
+                    self.settings_conn_var.set('错误')
+                    _dbg(f'_reconnect_mt5 error: {e}')
+                self.root.after(0, _update_err)
+        threading.Thread(target=_do_reconnect, daemon=True).start()
+        self.settings_conn_var.set('连接中...')
+
+    def _save_settings(self):
+        """保存设置到配置文件"""
+        try:
+            import configparser
+            config = configparser.ConfigParser()
+            config.read(r'E:\MySoftware\黄金分析工具_Portable\config.ini', encoding='utf-8')
+            if 'MT5' not in config:
+                config['MT5'] = {}
+            config['MT5']['terminal_path'] = self.settings_mt5_path_var.get()
+            config.write(open(r'E:\MySoftware\黄金分析工具_Portable\config.ini', 'w', encoding='utf-8'))
+            self.settings_conn_var.set('已保存')
+            _dbg('设置已保存')
+        except Exception as e:
+            _dbg(f'_save_settings error: {e}')
+
     def _signal(self):
         a = self.anz.analyze("XAUUSDc", self.tv.get())
         if not a: return
@@ -1259,41 +1462,59 @@ class GoldAnalyzerApp:
         try:
             i = self.anz.account()
             if not i: return
-            for k, short in [("balance","bal"),("equity","eq"),("margin","mg"),("free","free")]:
-                self.avars[short].set("${:,.2f}".format(i[k]))
-            p = i["profit"]
-            profit_str = "${:+,.2f}".format(p)
-            self.avars["prof"].set(profit_str)
-            # 盈亏颜色：盈利绿色，亏损红色
-            if p >= 0:
-                self.prof_lbl.config(fg=self.C["green"])
-            else:
-                self.prof_lbl.config(fg=self.C["red"])
-            pos = mt5.positions_get(symbol="XAUUSDc")
-            ps = list(pos) if pos is not None and len(pos) > 0 else []
-            txt = ""
-            if ps:
-                tick = mt5.symbol_info_tick("XAUUSDc")
-                if tick:
-                    for p in ps:
-                        d = "SELL" if p.type == mt5.POSITION_TYPE_SELL else "BUY"
-                        pnl = (tick.bid - p.price_open) * p.volume * 100 if p.type == mt5.POSITION_TYPE_BUY else (p.price_open - tick.bid) * p.volume * 100
-                        st = "盈" if pnl >= 0 else "亏"
-                        txt += f"{d} {p.volume:.2f}@{p.price_open:.2f} {st}${abs(pnl):.0f}\n"
+            # 只在数值变化时更新UI
+            bal = '$' + '{:,.2f}'.format(i['balance'])
+            if getattr(self, '_last_bal', None) != bal:
+                self.avars['bal'].set(bal)
+                self._last_bal = bal
+            eq = '$' + '{:,.2f}'.format(i['equity'])
+            if getattr(self, '_last_eq', None) != eq:
+                self.avars['eq'].set(eq)
+                self._last_eq = eq
+            mg = '$' + '{:,.2f}'.format(i['margin'])
+            if getattr(self, '_last_mg', None) != mg:
+                self.avars['mg'].set(mg)
+                self._last_mg = mg
+            free = '$' + '{:,.2f}'.format(i['free'])
+            if getattr(self, '_last_free', None) != free:
+                self.avars['free'].set(free)
+                self._last_free = free
+            p = i['profit']
+            prof = '$' + '{:+,.2f}'.format(p)
+            if getattr(self, '_last_prof', None) != prof:
+                self.avars['prof'].set(prof)
+                self._last_prof = prof
+                self.prof_lbl.config(fg=self.C['green'] if p >= 0 else self.C['red'])
+            # 持仓每2秒更新一次
+            now = datetime.now().timestamp()
+            if not hasattr(self, '_last_pos_time') or (now - self._last_pos_time) > 2:
+                self._last_pos_time = now
+                pos = mt5.positions_get(symbol='XAUUSDc')
+                ps = list(pos) if pos is not None and len(pos) > 0 else []
+                txt = ''
+                if ps:
+                    tick = mt5.symbol_info_tick('XAUUSDc')
+                    if tick:
+                        for p in ps:
+                            d = 'SELL' if p.type == mt5.POSITION_TYPE_SELL else 'BUY'
+                            pnl = (tick.bid - p.price_open) * p.volume * 100 if p.type == mt5.POSITION_TYPE_BUY else (p.price_open - tick.bid) * p.volume * 100
+                            st = '盈' if pnl >= 0 else '亏'
+                            txt += f'{d} {p.volume:.2f}@{p.price_open:.2f} {st}\
+'
+                    else:
+                        txt = '行情数据获取失败'
                 else:
-                    txt = "行情数据获取失败"
-            else:
-                txt = "无持仓"
-            self.pt.config(state="normal")
-            self.pt.delete("1.0", "end")
-            self.pt.insert("1.0", txt)
-            self.pt.config(state="disabled")
-            
+                    txt = '无持仓'
+                self.pt.config(state='normal')
+                self.pt.delete('1.0', 'end')
+                self.pt.insert('1.0', txt)
+                self.pt.config(state='disabled')
+
         except Exception as e:
-            self.pt.config(state="normal")
-            self.pt.delete("1.0", "end")
-            self.pt.insert("1.0", "持仓获取错误: " + str(e))
-            self.pt.config(state="disabled")
+            self.pt.config(state='normal')
+            self.pt.delete('1.0', 'end')
+            self.pt.insert('1.0', '持仓获取错误: ' + str(e))
+            self.pt.config(state='disabled')
 
     def _chart(self):
         self.countdown_annot = None  # 重置倒计时标注
@@ -1405,31 +1626,71 @@ class GoldAnalyzerApp:
         self.fig.subplots_adjust(hspace=1)
         self.canvas.draw()
     def _update_countdown(self):
-        """更新周期倒计时 - 每秒刷新"""
+        """更新周期倒计时 - 每秒刷新，显示在窗口标题"""
         try:
             now = datetime.now()
-            for prefix, tv_attr in [("m1", "chart_tv_m1"), ("h1", "chart_tv_h1")]:
-                tv_var = getattr(self, tv_attr, None)
-                if tv_var is None: continue
-                tf = tv_var.get()
-                if not tf: continue
-                period_secs = {"M1": 60, "M5": 300, "M6": 360, "M15": 900, "M30": 1800, "H1": 3600, "H4": 14400, "D1": 86400}.get(tf, 3600)
-                epoch = now.timestamp()
-                elapsed = epoch % period_secs
-                remaining = int(period_secs - elapsed)
-                mins = remaining // 60
-                secs = remaining % 60
-                countdown_str = f"{mins:02d}:{secs:02d}"
-                ak = "countdown_text_" + prefix
-                an = getattr(self, ak, None)
-                if an is not None:
-                    an.set_text(countdown_str)
+            m1_tf = getattr(self, "chart_tv_m1", None)
+            h1_tf = getattr(self, "chart_tv_h1", None)
+            m1_tf = m1_tf.get() if m1_tf else "M1"
+            h1_tf = h1_tf.get() if h1_tf else "H1"
+            period_secs = {"M1": 60, "M5": 300, "M6": 360, "M15": 900, "M30": 1800, "H1": 3600, "H4": 14400, "D1": 86400}
+            m1_secs = period_secs.get(m1_tf, 60)
+            h1_secs = period_secs.get(h1_tf, 3600)
+            epoch = now.timestamp()
+            m1_rem = int(m1_secs - (epoch % m1_secs))
+            h1_rem = int(h1_secs - (epoch % h1_secs))
+            m1_str = f"{m1_rem//60:02d}:{m1_rem%60:02d}"
+            h1_str = f"{h1_rem//60:02d}:{h1_rem%60:02d}"
+            self.countdown_var.set(m1_str)
+            self.root.title(f"HJ ANALYZER v3.071 - M1:{m1_str} H1:{h1_str}")
         except Exception as e:
             _dbg(f"_update_countdown error: {e}")
 
 
 
+def _kill_old_instances():
+    """启动前清理旧进程，避免缓存问题 - 使用taskkill强制关闭"""
+    import subprocess, time, os
+    try:
+        # 方法1: 使用taskkill关闭所有python.exe进程（除了当前进程）
+        current_pid = os.getpid()
+        result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq python.exe', '/FO', 'CSV'], 
+                              capture_output=True, text=True, timeout=5)
+        pids_to_kill = []
+        for line in result.stdout.split('\n'):
+            if 'python.exe' in line.lower():
+                parts = line.strip().split(',')
+                if len(parts) >= 2:
+                    try:
+                        pid = int(parts[1].strip('"'))
+                        if pid != current_pid:
+                            pids_to_kill.append(pid)
+                    except: pass
+        # 强制关闭所有找到的进程
+        for pid in pids_to_kill:
+            try:
+                subprocess.run(['taskkill', '/F', '/PID', str(pid)], 
+                             capture_output=True, timeout=3)
+            except: pass
+        time.sleep(2)  # 等待进程完全退出
+        # 方法2: 再次检查，确保没有残留
+        result2 = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq python.exe', '/FO', 'CSV'], 
+                                capture_output=True, text=True, timeout=5)
+        for line in result2.stdout.split('\n'):
+            if 'python.exe' in line.lower():
+                parts = line.strip().split(',')
+                if len(parts) >= 2:
+                    try:
+                        pid = int(parts[1].strip('"'))
+                        if pid != os.getpid():
+                            subprocess.run(['taskkill', '/F', '/IM', 'python.exe'], 
+                                         capture_output=True, timeout=5)
+                            break
+                    except: pass
+    except: pass
+
 if __name__ == "__main__":
+    _kill_old_instances()
     root = tk.Tk()
     app = GoldAnalyzerApp(root)
     root.protocol("WM_DELETE_WINDOW", app._close)

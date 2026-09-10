@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.068 - 完整版
+黄金分析助手 v3.070 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -75,9 +75,16 @@ class MT5Engine:
               'M30':mt5.TIMEFRAME_M30,'H1':mt5.TIMEFRAME_H1,'H4':mt5.TIMEFRAME_H4,'D1':mt5.TIMEFRAME_D1}
 
     def __init__(self):
-        self.ok = mt5.initialize()
+        self.ok = False
         self._connecting = False
         self._sym_digits = {}
+        # 尝试连接但不强制初始化
+        try:
+            acc = mt5.account_info()
+            if acc:
+                self.ok = True
+        except:
+            pass
 
     def shutdown(self):
         if self.ok: mt5.shutdown()
@@ -216,18 +223,43 @@ class MT5Engine:
                 'bb':bb,'atr':atr,'atr_hist':atr_hist,'atr_pct':ap,'vol':vl,'signals':sig,'overall':ov,
                 'bs':bs,'ss':ss,'res':res,'sup':sup,'closes':c,'rates':r}
     def connect(self):
+        """连接MT5 - 只在未连接时初始化，避免影响登录缓存"""
         if getattr(self, "_connecting", False): return
+        if self.ok: return  # 已连接则不重复初始化
         self._connecting = True
         try:
-            self.ok = mt5.initialize()
-            if self.ok:
+            # 先尝试获取账户信息，如果成功说明已连接
+            acc = mt5.account_info()
+            if acc:
+                self.ok = True
+                self._connecting = False
                 for sym in self.SYMBOLS:
                     si = mt5.symbol_info(sym)
                     if si:
                         self._sym_digits[sym] = si.digits if hasattr(si, "digits") else 2
-                self._connecting = False
-        except Exception:
+                return
+            # 未连接时才尝试初始化，带超时保护
+            import threading
+            result = [None]
+            def _init_thread():
+                result[0] = mt5.initialize(path=TERMINAL_PATH)
+            t = threading.Thread(target=_init_thread, daemon=True)
+            t.start()
+            t.join(timeout=8)
+            if t.is_alive():
+                self.ok = False
+                _dbg("MT5 init timeout")
+            else:
+                self.ok = result[0]
+                if self.ok:
+                    for sym in self.SYMBOLS:
+                        si = mt5.symbol_info(sym)
+                        if si:
+                            self._sym_digits[sym] = si.digits if hasattr(si, "digits") else 2
             self._connecting = False
+        except Exception as e:
+            self._connecting = False
+            _dbg(f'connect error: {e}')
 
     def prev_close(self, sym):
         try:
@@ -319,7 +351,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.068")
+        self.root.title("黄金分析助手 v3.070")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -348,8 +380,7 @@ class GoldAnalyzerApp:
         self.period_btns_m1 = []
         self.period_btns_h1 = []
         self.countdown_var = tk.StringVar(value="--:--")  # 周期倒计时
-        self.countdown_annot_m1 = None  # M1图表倒计时标注
-        self.countdown_annot_h1 = None  # H1图表倒计时标注
+        self.countdown_annot = None  # 倒计时标注对象
         self.sl_label = None
         self.avars = {}
         for k in ['bal','eq','mg','free','prof']: self.avars[k] = tk.StringVar(value='--')
@@ -388,10 +419,12 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.root.update_idletasks()
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{(sw-WINDOW_WIDTH)//2}+{(sh-WINDOW_HEIGHT)//2}")
+        x_pos = (sw - WINDOW_WIDTH) // 2
+        y_pos = max(20, (sh - WINDOW_HEIGHT) // 2)
+        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x_pos}+{y_pos}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.068 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.070 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -435,6 +468,14 @@ class GoldAnalyzerApp:
         
         # 右侧折叠面板
         self._build_right_panels()
+        self.root.after(100, self._fix_right_scroll)
+    
+    def _fix_right_scroll(self):
+        """修复右侧滚动区域"""
+        try:
+            self.right_canvas.configure(scrollregion=self.right_canvas.bbox('all'))
+        except:
+            pass
 
     def _panel_prices(self, parent):
         f = self._frame(parent, "实时行情")
@@ -625,16 +666,16 @@ class GoldAnalyzerApp:
         self.fig_m1.clear()
         a = self.anz.analyze("XAUUSDc", self.chart_tv_m1.get())
         if not a or a.get("rates") is None: return
-        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1, "m1")
+        self._draw_chart(self.fig_m1, a, "M1", self.chart_tv_m1)
 
     def _chart_h1(self):
         """绘制H1图表"""
         self.fig_h1.clear()
         a = self.anz.analyze("XAUUSDc", self.chart_tv_h1.get())
         if not a or a.get("rates") is None: return
-        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1, "h1")
+        self._draw_chart(self.fig_h1, a, "H1", self.chart_tv_h1)
 
-    def _draw_chart(self, fig, a, title_prefix, chart_tv, annot_key="m1"):
+    def _draw_chart(self, fig, a, title_prefix, chart_tv):
         """通用图表绘制方法"""
         from matplotlib import gridspec
         r = a["rates"]; n = min(len(r), 80)
@@ -721,17 +762,6 @@ class GoldAnalyzerApp:
             ax_macd.tick_params(axis='x', labelcolor=self.C['tx'])
             ax_macd.set_title("MACD 指数平滑异同", color=self.C["tx"], fontsize=9)
             ax_macd.set_ylim(min(macd_line)*1.2 if macd_line else -1, max(macd_line)*1.2 if macd_line else 1)
-        # countdown display - 简洁样式
-        cd = self.countdown_var.get()
-        ak = "countdown_text_" + title_prefix.lower()
-        # 只创建一次，后续通过 _update_countdown 更新
-        countdown_text = getattr(self, ak, None)
-        if countdown_text is None:
-            countdown_text = ax.text(0.98, 0.95, f"{cd}", transform=ax.transAxes,
-                        fontsize=10, ha="right", va="top", color="#FFD700", fontweight="bold")
-            setattr(self, ak, countdown_text)
-        else:
-            countdown_text.set_text(f"{cd}")
         fig.subplots_adjust(hspace=0.08)
         fig.canvas.draw()
 
@@ -769,6 +799,7 @@ class GoldAnalyzerApp:
         self._panel_indicators(self.bottom_content)
         self._panel_alerts(self.bottom_content)
         self._panel_auto_trade(self.bottom_content)
+        self._panel_settings(self.bottom_content)
 
     def _toggle_top(self):
         if self.top_content.winfo_ismapped():
@@ -1132,6 +1163,92 @@ class GoldAnalyzerApp:
                  font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card'], wraplength=500).pack(anchor='w')
         self._check_ea_status()
 
+
+    def _panel_settings(self, parent):
+        """设置面板"""
+        f = self._frame(parent, "设置")
+        # MT5连接设置
+        stf = tk.Frame(f, bg=self.C['card']); stf.pack(fill='x', padx=8, pady=(4,0))
+        tk.Label(stf, text='MT5终端:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(0,4))
+        self.settings_mt5_path_var = tk.StringVar(value=r'D:\\MetaTrader 5 EXNESS')
+        tk.Entry(stf, textvariable=self.settings_mt5_path_var, font=('Consolas', 9),
+                 bg=self.C['bg'], fg=self.C['tx'], relief='flat', width=40).pack(side='left', fill='x', expand=True, padx=(0,4))
+        tk.Button(stf, text='选择', command=self._select_mt5_path,
+                  bg=self.C['card'], fg=self.C['accent'], font=('Consolas', 9),
+                  cursor='hand2', relief='flat').pack(side='left', padx=4)
+        tk.Button(stf, text='重连', command=self._reconnect_mt5,
+                  bg=self.C['accent'], fg=self.C['bg'], font=('Consolas', 9, 'bold'),
+                  cursor='hand2', relief='flat', width=6).pack(side='left', padx=4)
+        # 连接状态
+        sf = tk.Frame(f, bg=self.C['card']); sf.pack(fill='x', padx=8, pady=(4,0))
+        tk.Label(sf, text='连接状态:', font=('Consolas', 9), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(0,8))
+        self.settings_conn_var = tk.StringVar(value='未连接')
+        tk.Label(sf, textvariable=self.settings_conn_var, font=('Consolas', 9), fg=self.C['yellow'], bg=self.C['card']).pack(side='left', padx=(0,15))
+        # 保存按钮
+        bf = tk.Frame(f, bg=self.C['card']); bf.pack(fill='x', padx=8, pady=4)
+        tk.Button(bf, text='保存设置', command=self._save_settings,
+                  bg=self.C['accent'], fg=self.C['bg'], font=('Consolas', 9, 'bold'),
+                  cursor='hand2', relief='flat', width=10).pack(side='left')
+        tk.Label(bf, text='提示: 修改路径后需点击重连', font=('Consolas', 8), fg=self.C['dim'], bg=self.C['card']).pack(side='left', padx=(10,0))
+
+    
+    def _select_mt5_path(self):
+        """选择MT5终端路径"""
+        from tkinter import filedialog
+        fpath = filedialog.askopenfilename(
+            title='选择MT5终端',
+            filetypes=[('EXE文件', '*.exe'), ('所有文件', '*.*')],
+            initialdir=r'D:\\'
+        )
+        if fpath:
+            dir_path = os.path.dirname(fpath)
+            self.settings_mt5_path_var.set(dir_path)
+            _dbg(f'Selected MT5 path: {dir_path}')
+
+    def _reconnect_mt5(self):
+        """重新连接MT5 - 使用线程避免阻塞UI，支持切换MT5终端"""
+        import threading
+        def _do_reconnect():
+            try:
+                mt5_path = self.settings_mt5_path_var.get()
+                self.anz.shutdown()
+                import time; time.sleep(1)
+                import MetaTrader5 as mt5_module
+                result = mt5_module.initialize(path=mt5_path)
+                def _update_ui():
+                    if result:
+                        self.anz.ok = True
+                        self.settings_conn_var.set('已连接')
+                        if hasattr(self, 'conn_lbl'):
+                            self.conn_lbl.config(fg=self.C['green'])
+                    else:
+                        self.settings_conn_var.set('连接失败')
+                        if hasattr(self, 'conn_lbl'):
+                            self.conn_lbl.config(fg=self.C['red'])
+                self.root.after(0, _update_ui)
+            except Exception as e:
+                def _update_err():
+                    self.settings_conn_var.set('错误')
+                    _dbg(f'_reconnect_mt5 error: {e}')
+                self.root.after(0, _update_err)
+        threading.Thread(target=_do_reconnect, daemon=True).start()
+        self.settings_conn_var.set('连接中...')
+
+    def _save_settings(self):
+        """保存设置到配置文件"""
+        try:
+            import configparser
+            config = configparser.ConfigParser()
+            config.read(r'E:\MySoftware\黄金分析工具_Portable\config.ini', encoding='utf-8')
+            if 'MT5' not in config:
+                config['MT5'] = {}
+            config['MT5']['terminal_path'] = self.settings_mt5_path_var.get()
+            config.write(open(r'E:\MySoftware\黄金分析工具_Portable\config.ini', 'w', encoding='utf-8'))
+            self.settings_conn_var.set('已保存')
+            _dbg('设置已保存')
+        except Exception as e:
+            _dbg(f'_save_settings error: {e}')
+
     def _signal(self):
         a = self.anz.analyze("XAUUSDc", self.tv.get())
         if not a: return
@@ -1405,25 +1522,23 @@ class GoldAnalyzerApp:
         self.fig.subplots_adjust(hspace=1)
         self.canvas.draw()
     def _update_countdown(self):
-        """更新周期倒计时 - 每秒刷新"""
+        """更新周期倒计时 - 每秒刷新，显示在窗口标题"""
         try:
             now = datetime.now()
-            for prefix, tv_attr in [("m1", "chart_tv_m1"), ("h1", "chart_tv_h1")]:
-                tv_var = getattr(self, tv_attr, None)
-                if tv_var is None: continue
-                tf = tv_var.get()
-                if not tf: continue
-                period_secs = {"M1": 60, "M5": 300, "M6": 360, "M15": 900, "M30": 1800, "H1": 3600, "H4": 14400, "D1": 86400}.get(tf, 3600)
-                epoch = now.timestamp()
-                elapsed = epoch % period_secs
-                remaining = int(period_secs - elapsed)
-                mins = remaining // 60
-                secs = remaining % 60
-                countdown_str = f"{mins:02d}:{secs:02d}"
-                ak = "countdown_text_" + prefix
-                an = getattr(self, ak, None)
-                if an is not None:
-                    an.set_text(countdown_str)
+            m1_tf = getattr(self, "chart_tv_m1", None)
+            h1_tf = getattr(self, "chart_tv_h1", None)
+            m1_tf = m1_tf.get() if m1_tf else "M1"
+            h1_tf = h1_tf.get() if h1_tf else "H1"
+            period_secs = {"M1": 60, "M5": 300, "M6": 360, "M15": 900, "M30": 1800, "H1": 3600, "H4": 14400, "D1": 86400}
+            m1_secs = period_secs.get(m1_tf, 60)
+            h1_secs = period_secs.get(h1_tf, 3600)
+            epoch = now.timestamp()
+            m1_rem = int(m1_secs - (epoch % m1_secs))
+            h1_rem = int(h1_secs - (epoch % h1_secs))
+            m1_str = f"{m1_rem//60:02d}:{m1_rem%60:02d}"
+            h1_str = f"{h1_rem//60:02d}:{h1_rem%60:02d}"
+            self.countdown_var.set(m1_str)
+            self.root.title(f"HJ ANALYZER v3.070 - M1:{m1_str} H1:{h1_str}")
         except Exception as e:
             _dbg(f"_update_countdown error: {e}")
 
