@@ -432,7 +432,7 @@ class GoldAnalyzerApp:
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(5, 0))
         # 新三列布局：M1图表 | H1图表 | 可折叠面板
         main = tk.Frame(self.root, bg=self.C["bg"])
-        main.pack(fill="both", expand=True, padx=16, pady=(6, 25))
+        main.pack(fill="both", expand=True, padx=16, pady=(6, 30))
         # 左列：M1 K线图 (固定宽度600px)
         left = tk.Frame(main, bg=self.C["bg"])
         left.pack(side="left", fill="both", padx=(0, 8))
