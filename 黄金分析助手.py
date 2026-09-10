@@ -1276,35 +1276,63 @@ class GoldAnalyzerApp:
         fig.canvas.draw()
 
     def _build_right_panels(self):
-        """构建右侧面板 - 仅显示账户信息"""
-        # 账户信息主面板
-        self.account_frame = tk.Frame(self.right_content, bg=self.C["card"])
-        self.account_frame.pack(fill="both", expand=True, padx=8, pady=8)
-        
-        # 标题栏
-        acct_header = tk.Frame(self.account_frame, bg=self.C["card"])
-        acct_header.pack(fill="x", pady=(0, 6))
-        tk.Label(
-            acct_header,
-            text="💼 账户信息",
-            font=("Consolas", 10, "bold"),
+        """构建右侧可折叠面板"""
+        # 上方折叠区
+        self.top_collapser = tk.Frame(self.right_content, bg=self.C["bg"])
+        self.top_collapser.pack(fill="x", pady=(0, 6))
+        self.top_header = tk.Frame(self.top_collapser, bg=self.C["card"])
+        self.top_header.pack(fill="x", padx=8, pady=4)
+        self.top_toggle = tk.Button(
+            self.top_header,
+            text="▼",
+            font=("Consolas", 8),
             fg=self.C["accent"],
             bg=self.C["card"],
-        ).pack(side="left")
-        self.acct_status_var = tk.StringVar(value="已连接")
+            relief="flat",
+            cursor="hand2",
+            command=self._toggle_top,
+        )
+        self.top_toggle.pack(side="left")
         tk.Label(
-            acct_header,
-            textvariable=self.acct_status_var,
-            font=("Consolas", 8),
-            fg=self.C["green"],
+            self.top_header,
+            text="实时数据",
+            font=("Consolas", 9, "bold"),
+            fg=self.C["tx"],
             bg=self.C["card"],
-        ).pack(side="right", padx=6)
-        
-        # 分隔线
-        tk.Frame(self.account_frame, height=1, bg=self.C["bd"]).pack(fill="x", pady=4)
-        
-        # 调用原有的账户面板函数
-        self._panel_account(self.account_frame)
+        ).pack(side="left", padx=6)
+        self.top_content = tk.Frame(self.right_content, bg=self.C["card"])
+        self.top_content.pack(fill="x", padx=8, pady=2)
+        self._panel_prices(self.top_content)
+        self._panel_signal(self.top_content)
+        self._panel_account(self.top_content)
+        # 下方折叠区
+        self.bottom_collapser = tk.Frame(self.right_content, bg=self.C["bg"])
+        self.bottom_collapser.pack(fill="x", pady=(6, 0))
+        self.bottom_header = tk.Frame(self.bottom_collapser, bg=self.C["card"])
+        self.bottom_header.pack(fill="x", padx=8, pady=4)
+        self.bottom_toggle = tk.Button(
+            self.bottom_header,
+            text="▼",
+            font=("Consolas", 8),
+            fg=self.C["accent"],
+            bg=self.C["card"],
+            relief="flat",
+            cursor="hand2",
+            command=self._toggle_bottom,
+        )
+        self.bottom_toggle.pack(side="left")
+        tk.Label(
+            self.bottom_header,
+            text="分析与交易",
+            font=("Consolas", 9, "bold"),
+            fg=self.C["tx"],
+            bg=self.C["card"],
+        ).pack(side="left", padx=6)
+        self.bottom_content = tk.Frame(self.right_content, bg=self.C["card"])
+        self.bottom_content.pack(fill="x", padx=8, pady=2)
+        self._panel_indicators(self.bottom_content)
+        self._panel_alerts(self.bottom_content)
+        self._panel_auto_trade(self.bottom_content)
 
     def _toggle_top(self):
         if self.top_content.winfo_ismapped():
