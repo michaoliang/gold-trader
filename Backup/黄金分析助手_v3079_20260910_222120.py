@@ -449,8 +449,8 @@ class GoldAnalyzerApp:
         right = tk.Frame(main, bg=self.C["bg"])
         right.pack(side="left", fill="both", padx=(0, 8))
         right.pack_propagate(False)
-        right.configure(width=600)
-
+        right.configure(width=500)
+        right.pack_propagate(False)
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
         self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
