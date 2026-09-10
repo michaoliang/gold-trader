@@ -2,7 +2,7 @@ import ctypes
 from ctypes import wintypes
 # -*- coding: utf-8 -*-
 """
-黄金分析助手 v3.079 - 完整版
+黄金分析助手 v3.078 - 完整版
 功能：实时行情、信号分析、自动交易、EA控制、价格预警、历史回测
 """
 import MetaTrader5 as mt5
@@ -321,7 +321,7 @@ class AlertSystem:
 class GoldAnalyzerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("黄金分析助手 v3.079")
+        self.root.title("黄金分析助手 v3.078")
         self.stop = False
         self.auto_on = False
         self.ea_status_var = tk.StringVar(value='未部署')
@@ -415,7 +415,7 @@ class GoldAnalyzerApp:
         self.root.geometry(f"{win_w}x{win_h}+{x}+{y}")
         tf = tk.Frame(self.root, bg=self.C["bg"])
         tf.pack(fill="x", padx=20, pady=(10, 5))
-        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.079 \u26a1", font=("Consolas", 14, "bold"),
+        tk.Label(tf, text="\u26a1 HJ ANALYZER  v3.078 \u26a1", font=("Consolas", 14, "bold"),
                  fg=self.C["accent"], bg=self.C["bg"]).pack(side="left")
         self.conn_lbl = tk.Label(tf, textvariable=self.conn_var, font=("Consolas", 8, "bold"),
                  fg=self.C["green"], bg=self.C["bg"])
@@ -431,7 +431,7 @@ class GoldAnalyzerApp:
                  fg=self.C["yellow"], bg=self.C["bg"]).pack(side="right", padx=(5, 0))
         # 新三列布局：M1图表 | H1图表 | 可折叠面板
         main = tk.Frame(self.root, bg=self.C["bg"])
-        main.pack(fill="both", expand=True, padx=16, pady=(6, 15))
+        main.pack(fill="both", expand=True, padx=16, pady=(6, 10))
         # 左列：M1 K线图 (固定宽度600px)
         left = tk.Frame(main, bg=self.C["bg"])
         left.pack(side="left", fill="both", padx=(0, 8))
@@ -446,14 +446,14 @@ class GoldAnalyzerApp:
         self._panel_chart_h1(mid)
         # 右列：可滚动面板（可折叠区域）
         right = tk.Frame(main, bg=self.C["bg"])
-        right.pack(side="left", fill="both", padx=(0, 8), width=450)
+        right.pack(side="left", fill="both", expand=True)
         self.right_canvas = tk.Canvas(right, bg=self.C["bg"], highlightthickness=0)
         self.right_scroll = tk.Scrollbar(right, orient="vertical", command=self.right_canvas.yview)
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["bg"])
         self.right_scrollable.bind("<Configure>", lambda e: self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all")))
         self.right_canvas.create_window((0, 0), window=self.right_scrollable, anchor="nw")
         self.right_canvas.configure(yscrollcommand=self.right_scroll.set)
-        self.right_canvas.pack(side="left", fill="both")
+        self.right_canvas.pack(side="left", fill="both", expand=True)
         self.right_scroll.pack(side="right", fill="y")
         self.right_canvas.bind("<MouseWheel>", lambda e: self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
         
