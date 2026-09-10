@@ -669,31 +669,31 @@ class GoldAnalyzerApp:
         right.pack_propagate(False)
         right.configure(width=600)
 
-        # 右侧面板 - 使用简化布局
+        # 右侧面板 - 使用pack布局代替canvas create_window
         self.right_scrollable = tk.Frame(right, bg=self.C["card"])
         self.right_scrollable.pack(side="left", fill="both", expand=True)
         
-        # 内部滚动容器
-        right_inner = tk.Frame(self.right_scrollable, bg=self.C["card"])
-        right_inner.pack(fill="both", expand=True, padx=2, pady=2)
-        
-        self.right_canvas = tk.Canvas(right_inner, bg=self.C["card"], highlightthickness=0)
-        self.right_scroll = tk.Scrollbar(right_inner, orient="vertical", command=self.right_canvas.yview)
-        self.right_scroll_content = tk.Frame(self.right_canvas, bg=self.C["card"])
-        
-        self.right_canvas.create_window((0, 0), window=self.right_scroll_content, anchor="nw")
+        # 创建滚动区域
+        self.right_canvas = tk.Canvas(self.right_scrollable, bg=self.C["card"], highlightthickness=0)
+        self.right_scroll = tk.Scrollbar(self.right_scrollable, orient="vertical", command=self.right_canvas.yview)
         self.right_canvas.configure(yscrollcommand=self.right_scroll.set)
         
+        # 内容容器
+        self.right_content = tk.Frame(self.right_canvas, bg=self.C["card"])
+        
+        self.right_canvas.create_window((0, 0), window=self.right_content, anchor="nw")
         self.right_canvas.pack(side="left", fill="both", expand=True)
         self.right_scroll.pack(side="right", fill="y")
         
+        # 鼠标滚轮支持
         def _on_mousewheel(e):
             self.right_canvas.yview_scroll(int(-1*(e.delta/120)), "units")
         self.right_canvas.bind("<MouseWheel>", _on_mousewheel)
         
+        # 更新scrollregion
         def _update_scroll(e):
             self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all"))
-        self.right_scroll_content.bind("<Configure>", _update_scroll)
+        self.right_content.bind("<Configure>", _update_scroll)
 
         # 右侧折叠面板
         self._build_right_panels()
@@ -1278,7 +1278,7 @@ class GoldAnalyzerApp:
     def _build_right_panels(self):
         """构建右侧可折叠面板"""
         # 上方折叠区
-        self.top_collapser = tk.Frame(self.right_scroll_content, bg=self.C["bg"])
+        self.top_collapser = tk.Frame(self.right_content, bg=self.C["bg"])
         self.top_collapser.pack(fill="x", pady=(0, 6))
         self.top_header = tk.Frame(self.top_collapser, bg=self.C["card"])
         self.top_header.pack(fill="x", padx=8, pady=4)
@@ -1300,13 +1300,13 @@ class GoldAnalyzerApp:
             fg=self.C["tx"],
             bg=self.C["card"],
         ).pack(side="left", padx=6)
-        self.top_content = tk.Frame(self.right_scroll_content, bg=self.C["card"])
+        self.top_content = tk.Frame(self.right_content, bg=self.C["card"])
         self.top_content.pack(fill="x", padx=8, pady=2)
         self._panel_prices(self.top_content)
         self._panel_signal(self.top_content)
         self._panel_account(self.top_content)
         # 下方折叠区
-        self.bottom_collapser = tk.Frame(self.right_scroll_content, bg=self.C["bg"])
+        self.bottom_collapser = tk.Frame(self.right_content, bg=self.C["bg"])
         self.bottom_collapser.pack(fill="x", pady=(6, 0))
         self.bottom_header = tk.Frame(self.bottom_collapser, bg=self.C["card"])
         self.bottom_header.pack(fill="x", padx=8, pady=4)
@@ -1328,7 +1328,7 @@ class GoldAnalyzerApp:
             fg=self.C["tx"],
             bg=self.C["card"],
         ).pack(side="left", padx=6)
-        self.bottom_content = tk.Frame(self.right_scroll_content, bg=self.C["card"])
+        self.bottom_content = tk.Frame(self.right_content, bg=self.C["card"])
         self.bottom_content.pack(fill="x", padx=8, pady=2)
         self._panel_indicators(self.bottom_content)
         self._panel_alerts(self.bottom_content)
