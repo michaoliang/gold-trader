@@ -676,9 +676,10 @@ class GoldAnalyzerApp:
         self.right_scrollable = tk.Frame(self.right_canvas, bg=self.C["card"])
         self.right_scrollable.bind(
             "<Configure>",
-            lambda e: self.right_canvas.configure(
-                scrollregion=self.right_canvas.bbox("all")
-            ),
+            lambda e: (
+                self.right_scrollable.configure(width=self.right_canvas.winfo_width()),
+                self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all"))
+            )[1],
         )
         self.right_canvas.create_window(
             (0, 0), window=self.right_scrollable, anchor="nw"
