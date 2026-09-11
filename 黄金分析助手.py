@@ -68,6 +68,7 @@ if os.path.exists(_cfg_path):
 TERMINAL_PATH = _cfg.get(
     "MT5", "terminal_path", fallback=r"D:\MetaTrader 5 EXNESS\terminal64.exe"
 )
+MT5_LOGS_DIR = os.path.join(os.path.dirname(TERMINAL_PATH), "MQL5", "Logs")
 TARGET_BALANCE = float(_cfg.get("Target", "target_balance", fallback="3000"))
 INITIAL_BALANCE = float(_cfg.get("Target", "initial_balance", fallback="1560"))
 AUTO_LOT = float(_cfg.get("AutoTrade", "lot_size", fallback="0.01"))
@@ -540,25 +541,6 @@ class GoldAnalyzerApp:
         self.avars = {}
         for k in ["bal", "eq", "mg", "free", "prof"]:
             self.avars[k] = tk.StringVar(value="--")
-        
-        # 布林带相关变量（防止KeyError）
-        self.bb_upper_var = tk.StringVar(value="--")
-        self.bb_middle_var = tk.StringVar(value="--")
-        self.bb_lower_var = tk.StringVar(value="--")
-        
-        # 确保价格相关字典已初始化（防止KeyError）
-        if not hasattr(self, '_prev'):
-            self._prev = {}
-        if not hasattr(self, '_prev_close'):
-            self._prev_close = {}
-        if not hasattr(self, 'pcl'):
-            self.pcl = {}
-        if not hasattr(self, 'price_vars'):
-            self.price_vars = {}
-        if not hasattr(self, 'daily_vars'):
-            self.daily_vars = {}
-        if not hasattr(self, 'daily_lbls'):
-            self.daily_lbls = {}
         self.ivars = {}
         for k in ["ma5", "ma10", "ma20", "ma50", "rsi", "macd", "bbu", "bbl", "atr"]:
             self.ivars[k] = tk.StringVar(value="--")
@@ -686,7 +668,7 @@ class GoldAnalyzerApp:
         right = tk.Frame(main, bg=self.C["bg"])
         right.pack(side="left", fill="both", padx=(0, 8))
         right.pack_propagate(False)
-        right.configure(width=600)
+        right.configure(width=750)
 
         # 右侧面板 - 使用pack布局代替canvas create_window
         self.right_scrollable = tk.Frame(right, bg=self.C["card"])
@@ -716,6 +698,8 @@ class GoldAnalyzerApp:
 
         # 右侧折叠面板
         self._build_right_panels()
+        # 强制展开底部面板
+
 
         # 修复右侧滚动区域
         self.root.after(100, self._fix_right_scroll)
@@ -878,6 +862,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["bal"] = tk.StringVar(value="--")
         tk.Label(
             bal_card,
             textvariable=self.avars["bal"],
@@ -896,6 +881,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["eq"] = tk.StringVar(value="--")
         tk.Label(
             eq_card,
             textvariable=self.avars["eq"],
@@ -918,6 +904,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["mg"] = tk.StringVar(value="--")
         tk.Label(
             mg_card,
             textvariable=self.avars["mg"],
@@ -936,6 +923,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["free"] = tk.StringVar(value="--")
         tk.Label(
             free_card,
             textvariable=self.avars["free"],
@@ -954,6 +942,7 @@ class GoldAnalyzerApp:
             fg=self.C["dim"],
             bg=self.C["card2"],
         ).pack(anchor="w", padx=6, pady=(4, 0))
+        self.avars["prof"] = tk.StringVar(value="--")
         self.prof_lbl = tk.Label(
             prof_card,
             textvariable=self.avars["prof"],
@@ -1298,7 +1287,7 @@ class GoldAnalyzerApp:
         self.top_header.pack(fill="x", padx=8, pady=4)
         self.top_toggle = tk.Button(
             self.top_header,
-            text="v",
+            text="▼",
             font=("Consolas", 8),
             fg=self.C["accent"],
             bg=self.C["card"],
@@ -1326,7 +1315,7 @@ class GoldAnalyzerApp:
         self.bottom_header.pack(fill="x", padx=8, pady=4)
         self.bottom_toggle = tk.Button(
             self.bottom_header,
-            text="v",
+            text="▼",
             font=("Consolas", 8),
             fg=self.C["accent"],
             bg=self.C["card"],
@@ -1343,10 +1332,29 @@ class GoldAnalyzerApp:
             bg=self.C["card"],
         ).pack(side="left", padx=6)
         self.bottom_content = tk.Frame(self.right_content, bg=self.C["card"])
-        self.bottom_content.pack(fill="x", padx=8, pady=2)
+        self.bottom_content.pack(fill="both", expand=True, padx=8, pady=2)
         self._panel_indicators(self.bottom_content)
         self._panel_alerts(self.bottom_content)
         self._panel_auto_trade(self.bottom_content)
+
+        # === EA实时日志区域（独立放在right_content底部）===
+        self.ea_log_frame = tk.Frame(self.root, bg=self.C["card"])
+        self.ea_log_frame.pack(fill="x", side="bottom", pady=(8, 0))
+        tk.Label(
+            self.ea_log_frame,
+            text="● EA实时状态",
+            font=("Consolas", 9, "bold"),
+            fg=self.C["accent"],
+            bg=self.C["card"],
+        ).pack(anchor="w")
+        self.ea_log_text = tk.Text(
+            self.ea_log_frame, height=8, font=("Consolas", 8),
+            fg=self.C["tx"], bg=self.C["card2"],
+            insertbackground=self.C["tx"],
+            relief="flat", state="disabled",
+            wrap="word",
+        )
+        self.ea_log_text.pack(fill="x", pady=(2, 0))
 
     def _toggle_top(self):
         if self.top_content.winfo_ismapped():
@@ -1357,12 +1365,8 @@ class GoldAnalyzerApp:
             self.top_toggle.config(text="▼")
 
     def _toggle_bottom(self):
-        if self.bottom_content.winfo_ismapped():
-            self.bottom_content.pack_forget()
-            self.bottom_toggle.config(text="▶")
-        else:
-            self.bottom_content.pack(fill="x", padx=8, pady=2)
-            self.bottom_toggle.config(text="▼")
+        # 底部面板保持展开
+        pass
 
     def _panel_indicators(self, parent):
         f = self._frame(parent, "技术指标")
@@ -1717,26 +1721,24 @@ class GoldAnalyzerApp:
                 if t:
                     dig = self.anz._sym_digits.get(sym, 2)
                     prev = self._prev.get(sym)
-                    # 安全检查：确保字典中有该键
-                    if sym in self.pcl and sym in self.price_vars:
-                        if prev:
-                            ch = t.bid - prev
-                            pct = ch / prev * 100 if prev else 0
-                            sg = "+" if ch >= 0 else ""
-                            co = self.C["green"] if ch >= 0 else self.C["red"]
-                            self.pcl[sym].config(bg=co)
-                            self.price_vars[sym].set(f"{t.bid:.{dig}f}  {sg}{pct:.2f}%")
-                        else:
-                            self.price_vars[sym].set(f"{t.bid:.{dig}f}")
-                        self._prev[sym] = t.bid
-                        pc = self._prev_close.get(sym)
-                        if pc and sym in self.daily_vars and sym in self.daily_lbls:
-                            dch = t.bid - pc
-                            dpct = dch / pc * 100
-                            dsg = "+" if dch >= 0 else ""
-                            dco = self.C["green"] if dch >= 0 else self.C["red"]
-                            self.daily_vars[sym].set(f"[日{dsg}{dpct:.2f}%]")
-                            self.daily_lbls[sym].config(fg=dco)
+                    if prev:
+                        ch = t.bid - prev
+                        pct = ch / prev * 100 if prev else 0
+                        sg = "+" if ch >= 0 else ""
+                        co = self.C["green"] if ch >= 0 else self.C["red"]
+                        self.pcl[sym].config(bg=co)
+                        self.price_vars[sym].set(f"{t.bid:.{dig}f}  {sg}{pct:.2f}%")
+                    else:
+                        self.price_vars[sym].set(f"{t.bid:.{dig}f}")
+                    self._prev[sym] = t.bid
+                    pc = self._prev_close.get(sym)
+                    if pc:
+                        dch = t.bid - pc
+                        dpct = dch / pc * 100
+                        dsg = "+" if dch >= 0 else ""
+                        dco = self.C["green"] if dch >= 0 else self.C["red"]
+                        self.daily_vars[sym].set(f"[日{dsg}{dpct:.2f}%]")
+                        self.daily_lbls[sym].config(fg=dco)
             self._signal()
             self._account()
             self._chart_m1()
@@ -1790,13 +1792,50 @@ class GoldAnalyzerApp:
         self.root.after(1000, self._start_countdown_timer)
 
     def _check_ea_status(self):
-        """检查EA状态"""
+        """检查EA状态并实时显示专家日志"""
         try:
-            status = "未部署"
-            if hasattr(self, "ea_status_var"):
-                self.ea_status_var.set(status)
-        except:
+            import datetime as _dt
+            today = _dt.date.today().strftime("%Y%m%d")
+            log_path = os.path.join(MT5_LOGS_DIR, today + ".log")
+            if not os.path.exists(log_path):
+                yesterday = (_dt.date.today() - _dt.timedelta(days=1)).strftime("%Y%m%d")
+                log_path = os.path.join(MT5_LOGS_DIR, yesterday + ".log")
+            MAX_LOG_LINES = 200
+            entries = []
+            if os.path.exists(log_path):
+                fsize = os.path.getsize(log_path)
+                if fsize > 50 * 1024 * 1024:
+                    with open(log_path, "r", encoding="utf-16", errors="replace") as _f:
+                        _f.seek(max(0, fsize - 2 * 1024 * 1024))
+                        _lines = _f.readlines()
+                else:
+                    with open(log_path, "r", encoding="utf-16", errors="replace") as _f:
+                        _lines = _f.readlines()
+                filtered = [l.rstrip() for l in _lines if "Max_HJ_EA" in l]
+                entries = filtered[-MAX_LOG_LINES:]
+            if hasattr(self, "ea_log_text") and getattr(self, "ea_log_text", None):
+                self.ea_log_text.config(state="normal")
+                self.ea_log_text.delete("1.0", tk.END)
+                if entries:
+                    for entry in entries:
+                        parts = entry.split(chr(9))
+                        if len(parts) >= 5:
+                            time_str = parts[2]
+                            msg = parts[4] if len(parts) > 4 else entry
+                            self.ea_log_text.insert(tk.END, "[" + time_str + "] " + msg + chr(10))
+                else:
+                    self.ea_log_text.insert(tk.END, "暂无EA日志" + chr(10))
+                self.ea_log_text.see(tk.END)
+                self.ea_log_text.config(state="disabled")
+        except Exception as _e:
             pass
+
+        try:
+            if hasattr(self, 'bottom_content'):
+                self.bottom_content.pack(fill='both', expand=True, padx=8, pady=2)
+            if hasattr(self, 'ea_log_frame'):
+                self.ea_log_frame.pack(fill='x', pady=(8, 0))
+        except: pass
 
     def _close(self):
         self.stop = True
@@ -2259,22 +2298,7 @@ class GoldAnalyzerApp:
 
     def _account(self):
         try:
-            # 调试：写入文件
-            try:
-                with open(r"E:\MySoftware\黄金分析工具_Portable\debug_account.log", "a", encoding="utf-8") as _f:
-                    if not hasattr(self, 'avars') or not self.avars:
-                        _f.write("[DEBUG] avars not initialized!\n")
-                        return
-                    _f.write(f"[DEBUG] avars keys: {list(self.avars.keys())}\n")
-                    
-                    i = self.anz.account()
-                    _f.write(f"[DEBUG] account info: {i}\n")
-                    if not i:
-                        _f.write("[DEBUG] No account info!\n")
-                        return
-                    _f.write(f"[DEBUG] Setting values...\n")
-            except Exception as _e:
-                pass
+            i = self.anz.account()
             if not i:
                 return
             for k, short in [
